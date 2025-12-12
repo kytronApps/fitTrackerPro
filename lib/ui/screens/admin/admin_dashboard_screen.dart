@@ -18,6 +18,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int currentIndex = 0;
 
+  // Lista de vistas - se mantiene en memoria
   final List<Widget> views = const [
     AdminUsersView(),
     AdminWeeklyView(),
@@ -36,11 +37,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: AppColors.white,
-        
         centerTitle: false,
       ),
 
-      body: views[currentIndex],
+      // IndexedStack mantiene todas las vistas vivas
+      // Esto evita que los StreamBuilders se destruyan
+      body: IndexedStack(
+        index: currentIndex,
+        children: views,
+      ),
 
       bottomNavigationBar: AdminNavBar(
         currentIndex: currentIndex,
@@ -53,4 +58,3 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 }
-
