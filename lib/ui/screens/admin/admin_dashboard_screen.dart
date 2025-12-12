@@ -36,10 +36,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: AppColors.white,
-        title: const Text(
-          "Panel Administrador",
-          style: TextStyle(color: AppColors.textPrimary),
-        ),
+        
         centerTitle: false,
       ),
 
