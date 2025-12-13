@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../app/theme/colors.dart';
 import '../../../models/models.dart';
 import '../../widgets/widgets.dart';
+import './../../screens/screens.dart';
 
 class AdminUsersView extends StatefulWidget {
   const AdminUsersView({super.key});
@@ -416,18 +417,17 @@ class _AdminUsersViewState extends State<AdminUsersView> {
                 // Opciones
                 ListTile(
                   leading: const Icon(Icons.visibility, color: AppColors.bluePrimary),
-                  title: const Text("Ver detalles"),
+                  title: const Text("Ver detalles completos"),
+                  subtitle: const Text("Programa, dieta, suplementos..."),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Navegar a detalles del usuario
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.edit, color: Colors.orange),
-                  title: const Text("Editar usuario"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Editar usuario
+                    // Navegar a la pantalla de detalle
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UserDetailScreen(user: user),
+                      ),
+                    );
                   },
                 ),
                 ListTile(
