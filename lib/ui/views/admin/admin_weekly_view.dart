@@ -15,6 +15,7 @@ class AdminWeeklyView extends StatefulWidget {
 
 class _AdminWeeklyViewState extends State<AdminWeeklyView> {
   bool showOnlyPending = true;
+  bool showArchived = false; // NUEVO: Toggle para mostrar archivados
 
   @override
   Widget build(BuildContext context) {
@@ -45,14 +46,30 @@ class _AdminWeeklyViewState extends State<AdminWeeklyView> {
                 children: [
                   _buildFilterChip(
                     label: 'Pendientes',
-                    isSelected: showOnlyPending,
-                    onTap: () => setState(() => showOnlyPending = true),
+                    isSelected: showOnlyPending && !showArchived,
+                    onTap: () => setState(() {
+                      showOnlyPending = true;
+                      showArchived = false;
+                    }),
                   ),
                   const SizedBox(width: 12),
                   _buildFilterChip(
                     label: 'Todos',
-                    isSelected: !showOnlyPending,
-                    onTap: () => setState(() => showOnlyPending = false),
+                    isSelected: !showOnlyPending && !showArchived,
+                    onTap: () => setState(() {
+                      showOnlyPending = false;
+                      showArchived = false;
+                    }),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildFilterChip(
+                    label: 'Archivados',
+                    isSelected: showArchived,
+                    icon: Icons.archive_outlined,
+                    onTap: () => setState(() {
+                      showArchived = true;
+                      showOnlyPending = false;
+                    }),
                   ),
                 ],
               ),
@@ -235,6 +252,7 @@ class _AdminWeeklyViewState extends State<AdminWeeklyView> {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
+    IconData? icon,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -250,13 +268,26 @@ class _AdminWeeklyViewState extends State<AdminWeeklyView> {
             width: 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? AppColors.white : AppColors.textSecondary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? AppColors.white : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? AppColors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -457,6 +488,22 @@ class QuestionnaireDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
+          if (questionnaire.reviewed && !questionnaire.archived)
+            IconButton(
+              icon: const Icon(Icons.archive_outlined),
+              tooltip: 'Archivar',
+              onPressed: () => _archiveQuestionnaire(context),
+            ),
+          if (questionnaire.archived)
+            IconButton(
+              icon: const Icon(Icons.unarchive_outlined),
+              tooltip: 'Desarchivar',
+              onPressed: () => _unarchiveQuestionnaire(context),
+            ),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () => _showMoreOptions(context),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -479,6 +526,13 @@ class QuestionnaireDetailScreen extends StatelessWidget {
             _buildSectionTitle('Evaluación General'),
             const SizedBox(height: 12),
             _buildGeneralQuestions(),
+            
+            const SizedBox(height: 24),
+            
+            // Medidas antropométricas
+            _buildSectionTitle('Peso Corporal y Perímetros'),
+            const SizedBox(height: 12),
+            _buildBodyMeasurements(context),
           ],
         ),
       ),
@@ -756,6 +810,319 @@ class QuestionnaireDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildBodyMeasurements(BuildContext context) {
+    final hasData = questionnaire.bodyWeight != null ||
+        questionnaire.waist != null ||
+        questionnaire.hips != null ||
+        questionnaire.chest != null ||
+        questionnaire.thigh != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Medidas Antropométricas',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (hasData)
+                IconButton(
+                  onPressed: () => _showAddAdminNotes(context),
+                  icon: const Icon(Icons.note_add, size: 20),
+                  color: AppColors.bluePrimary,
+                  tooltip: 'Agregar notas',
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Datos proporcionados por el usuario',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary.withOpacity(0.7),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (!hasData)
+            Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.straighten,
+                    size: 48,
+                    color: AppColors.textSecondary.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'El usuario aún no ha registrado medidas',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (hasData) ...[
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                if (questionnaire.bodyWeight != null)
+                  _buildMeasurementTile(
+                    'Peso Corporal',
+                    '${questionnaire.bodyWeight!.toStringAsFixed(1)} kg',
+                    Icons.monitor_weight_outlined,
+                  ),
+                if (questionnaire.waist != null)
+                  _buildMeasurementTile(
+                    'Cintura',
+                    '${questionnaire.waist!.toStringAsFixed(0)} cm',
+                    Icons.straighten,
+                  ),
+                if (questionnaire.hips != null)
+                  _buildMeasurementTile(
+                    'Cadera',
+                    '${questionnaire.hips!.toStringAsFixed(0)} cm',
+                    Icons.straighten,
+                  ),
+                if (questionnaire.chest != null)
+                  _buildMeasurementTile(
+                    'Pecho',
+                    '${questionnaire.chest!.toStringAsFixed(0)} cm',
+                    Icons.straighten,
+                  ),
+                if (questionnaire.thigh != null)
+                  _buildMeasurementTile(
+                    'Muslo',
+                    '${questionnaire.thigh!.toStringAsFixed(0)} cm',
+                    Icons.straighten,
+                  ),
+              ],
+            ),
+            if (questionnaire.adminNotes != null && questionnaire.adminNotes!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Notas del Administrador',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showAddAdminNotes(context),
+                    icon: const Icon(Icons.edit, size: 18),
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.tagWorkout.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.bluePrimary.withOpacity(0.2),
+                  ),
+                ),
+                child: Text(
+                  questionnaire.adminNotes!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeasurementTile(String label, String value, IconData icon) {
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.textSecondary.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: AppColors.bluePrimary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.bluePrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddAdminNotes(BuildContext context) {
+    final notesCtrl = TextEditingController(
+      text: questionnaire.adminNotes ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: AppColors.white,
+          title: const Row(
+            children: [
+              Icon(Icons.edit_note, color: AppColors.bluePrimary),
+              SizedBox(width: 12),
+              Text(
+                'Notas del Administrador',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Agrega observaciones sobre el progreso de las medidas',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: notesCtrl,
+                maxLines: 5,
+                maxLength: 500,
+                decoration: InputDecoration(
+                  hintText: 'Ejemplo: Buena evolución en el peso, mantener el trabajo...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppColors.bluePrimary,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: AppColors.background,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('weekly_questionnaries')
+                      .doc(questionnaire.id)
+                      .update({
+                    'adminNotes': notesCtrl.text.trim(),
+                  });
+
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Notas guardadas correctamente'),
+                        backgroundColor: AppColors.bluePrimary,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red.shade600,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.bluePrimary,
+                foregroundColor: AppColors.white,
+              ),
+              child: const Text('Guardar Notas'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _markAsReviewed(BuildContext context) {
     showDialog(
       context: context,
@@ -821,6 +1188,300 @@ class QuestionnaireDetailScreen extends StatelessWidget {
                 foregroundColor: AppColors.white,
               ),
               child: const Text('Marcar Revisado'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _archiveQuestionnaire(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: AppColors.white,
+          title: const Row(
+            children: [
+              Icon(Icons.archive, color: AppColors.purplePrimary),
+              SizedBox(width: 12),
+              Text(
+                'Archivar Cuestionario',
+                style: TextStyle(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Este cuestionario se moverá a la sección de archivados. '
+            'Podrás verlo en cualquier momento desde el filtro "Archivados".',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('weekly_questionnaries')
+                      .doc(questionnaire.id)
+                      .update({'archived': true});
+
+                  if (context.mounted) {
+                    Navigator.pop(context); // Cerrar diálogo
+                    Navigator.pop(context); // Volver a lista
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Cuestionario archivado correctamente'),
+                        backgroundColor: AppColors.purplePrimary,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red.shade600,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.purplePrimary,
+                foregroundColor: AppColors.white,
+              ),
+              child: const Text('Archivar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _unarchiveQuestionnaire(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: AppColors.white,
+          title: const Row(
+            children: [
+              Icon(Icons.unarchive, color: AppColors.bluePrimary),
+              SizedBox(width: 12),
+              Text(
+                'Desarchivar Cuestionario',
+                style: TextStyle(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+          content: const Text(
+            '¿Quieres volver a mostrar este cuestionario en la lista principal?',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('weekly_questionnaries')
+                      .doc(questionnaire.id)
+                      .update({'archived': false});
+
+                  if (context.mounted) {
+                    Navigator.pop(context); // Cerrar diálogo
+                    Navigator.pop(context); // Volver a lista
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Cuestionario desarchivado'),
+                        backgroundColor: AppColors.bluePrimary,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red.shade600,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.bluePrimary,
+                foregroundColor: AppColors.white,
+              ),
+              child: const Text('Desarchivar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textSecondary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (!questionnaire.archived)
+                ListTile(
+                  leading: const Icon(Icons.archive, color: AppColors.purplePrimary),
+                  title: const Text('Archivar cuestionario'),
+                  subtitle: const Text('Mover a archivados'),
+                  enabled: questionnaire.reviewed,
+                  onTap: questionnaire.reviewed
+                      ? () {
+                          Navigator.pop(context);
+                          _archiveQuestionnaire(context);
+                        }
+                      : null,
+                ),
+              if (questionnaire.archived)
+                ListTile(
+                  leading: const Icon(Icons.unarchive, color: AppColors.bluePrimary),
+                  title: const Text('Desarchivar cuestionario'),
+                  subtitle: const Text('Volver a la lista principal'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _unarchiveQuestionnaire(context);
+                  },
+                ),
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red.shade600),
+                title: const Text('Eliminar permanentemente'),
+                subtitle: const Text('Esta acción no se puede deshacer'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDelete(context);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: AppColors.white,
+          title: Text(
+            '⚠️ Eliminar Cuestionario',
+            style: TextStyle(color: Colors.red.shade700),
+          ),
+          content: Text(
+            'Vas a eliminar permanentemente el cuestionario de ${questionnaire.userName}. '
+            'Esta acción NO se puede deshacer.',
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('weekly_questionnaries')
+                      .doc(questionnaire.id)
+                      .delete();
+
+                  if (context.mounted) {
+                    Navigator.pop(context); // Cerrar diálogo
+                    Navigator.pop(context); // Volver a lista
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Cuestionario eliminado'),
+                        backgroundColor: Colors.red.shade600,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red.shade600,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Text(
+                'Eliminar',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );

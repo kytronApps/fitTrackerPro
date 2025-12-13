@@ -1,3 +1,4 @@
+// lib/models/weekly_questionnaire_model.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -9,6 +10,7 @@ class WeeklyQuestionnaire {
   final String weekDate; // "2024-11-25"
   final DateTime createdAt;
   final bool reviewed;
+  final bool archived; // NUEVO: Para archivar cuestionarios
   
   // Agujetas (1-10) por grupo muscular
   final int pectoral;
@@ -32,6 +34,14 @@ class WeeklyQuestionnaire {
   final String recoveryNotes; // Si no recuperado, ¿a qué crees que se debe?
   final String sleepHours; // ¿Cuántas horas has dormido de media?
   final String importantNotes; // Notas importantes
+  
+  // Medidas antropométricas (proporcionadas por el usuario)
+  final double? bodyWeight; // peso_corporal en kg
+  final double? waist; // cintura en cm
+  final double? hips; // cadera en cm
+  final double? chest; // pecho en cm
+  final double? thigh; // muslo en cm
+  final String? adminNotes; // Notas del administrador sobre las medidas
 
   WeeklyQuestionnaire({
     required this.id,
@@ -41,6 +51,7 @@ class WeeklyQuestionnaire {
     required this.weekDate,
     required this.createdAt,
     required this.reviewed,
+    this.archived = false, // Por defecto no archivado
     required this.pectoral,
     required this.dorsal,
     required this.deltoidAnterior,
@@ -60,6 +71,12 @@ class WeeklyQuestionnaire {
     required this.recoveryNotes,
     required this.sleepHours,
     required this.importantNotes,
+    this.bodyWeight,
+    this.waist,
+    this.hips,
+    this.chest,
+    this.thigh,
+    this.adminNotes,
   });
 
   factory WeeklyQuestionnaire.fromFirestore(DocumentSnapshot doc) {
@@ -73,6 +90,7 @@ class WeeklyQuestionnaire {
       weekDate: data['weekDate'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       reviewed: data['reviewed'] ?? false,
+      archived: data['archived'] ?? false, // NUEVO
       pectoral: data['pectoral'] ?? 0,
       dorsal: data['dorsal'] ?? 0,
       deltoidAnterior: data['deltoidAnterior'] ?? 0,
@@ -92,6 +110,12 @@ class WeeklyQuestionnaire {
       recoveryNotes: data['recoveryNotes'] ?? '',
       sleepHours: data['sleepHours'] ?? '',
       importantNotes: data['importantNotes'] ?? '',
+      bodyWeight: data['peso_corporal']?.toDouble(),
+      waist: data['cintura']?.toDouble(),
+      hips: data['cadera']?.toDouble(),
+      chest: data['pecho']?.toDouble(),
+      thigh: data['muslo']?.toDouble(),
+      adminNotes: data['adminNotes'],
     );
   }
 
@@ -103,6 +127,7 @@ class WeeklyQuestionnaire {
       'weekDate': weekDate,
       'createdAt': Timestamp.fromDate(createdAt),
       'reviewed': reviewed,
+      'archived': archived, // NUEVO
       'pectoral': pectoral,
       'dorsal': dorsal,
       'deltoidAnterior': deltoidAnterior,
@@ -122,6 +147,12 @@ class WeeklyQuestionnaire {
       'recoveryNotes': recoveryNotes,
       'sleepHours': sleepHours,
       'importantNotes': importantNotes,
+      if (bodyWeight != null) 'peso_corporal': bodyWeight,
+      if (waist != null) 'cintura': waist,
+      if (hips != null) 'cadera': hips,
+      if (chest != null) 'pecho': chest,
+      if (thigh != null) 'muslo': thigh,
+      if (adminNotes != null) 'adminNotes': adminNotes,
     };
   }
 
@@ -175,6 +206,7 @@ class WeeklyQuestionnaire {
     String? weekDate,
     DateTime? createdAt,
     bool? reviewed,
+    bool? archived, // NUEVO
     int? pectoral,
     int? dorsal,
     int? deltoidAnterior,
@@ -194,6 +226,12 @@ class WeeklyQuestionnaire {
     String? recoveryNotes,
     String? sleepHours,
     String? importantNotes,
+    double? bodyWeight,
+    double? waist,
+    double? hips,
+    double? chest,
+    double? thigh,
+    String? adminNotes,
   }) {
     return WeeklyQuestionnaire(
       id: id ?? this.id,
@@ -203,6 +241,7 @@ class WeeklyQuestionnaire {
       weekDate: weekDate ?? this.weekDate,
       createdAt: createdAt ?? this.createdAt,
       reviewed: reviewed ?? this.reviewed,
+      archived: archived ?? this.archived, // NUEVO
       pectoral: pectoral ?? this.pectoral,
       dorsal: dorsal ?? this.dorsal,
       deltoidAnterior: deltoidAnterior ?? this.deltoidAnterior,
@@ -222,6 +261,12 @@ class WeeklyQuestionnaire {
       recoveryNotes: recoveryNotes ?? this.recoveryNotes,
       sleepHours: sleepHours ?? this.sleepHours,
       importantNotes: importantNotes ?? this.importantNotes,
+      bodyWeight: bodyWeight ?? this.bodyWeight,
+      waist: waist ?? this.waist,
+      hips: hips ?? this.hips,
+      chest: chest ?? this.chest,
+      thigh: thigh ?? this.thigh,
+      adminNotes: adminNotes ?? this.adminNotes,
     );
   }
 }
