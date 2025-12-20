@@ -24,7 +24,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -41,7 +41,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
         elevation: 0,
         backgroundColor: AppColors.white,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, size: 20, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -54,17 +54,19 @@ class _UserDetailScreenState extends State<UserDetailScreen>
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.more_vert, color: AppColors.textPrimary),
+            icon: const Icon(Icons.edit, color: AppColors.bluePrimary),
+            onPressed: () => _showEditUserDialog(),
+            tooltip: 'Editar información',
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
             onPressed: () => _showMoreOptions(context),
           ),
         ],
       ),
       body: Column(
         children: [
-          // HEADER CON INFO DEL USUARIO
           _buildUserHeader(),
-
-          // TABS
           Container(
             color: AppColors.white,
             child: TabBar(
@@ -75,24 +77,24 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               indicatorColor: AppColors.bluePrimary,
               indicatorWeight: 3,
               labelStyle: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
               tabs: const [
-                Tab(icon: Icon(Icons.fitness_center, size: 20), text: 'Programa'),
-                Tab(icon: Icon(Icons.trending_up, size: 20), text: 'Pivot'),
-                Tab(icon: Icon(Icons.calendar_today, size: 20), text: 'Planificación'),
-                Tab(icon: Icon(Icons.medication, size: 20), text: 'Suplementos'),
-                Tab(icon: Icon(Icons.restaurant, size: 20), text: 'Dieta'),
+                Tab(icon: Icon(Icons.info_outline, size: 18), text: 'Info'),
+                Tab(icon: Icon(Icons.fitness_center, size: 18), text: 'Programa'),
+                Tab(icon: Icon(Icons.trending_up, size: 18), text: 'Pivot'),
+                Tab(icon: Icon(Icons.calendar_today, size: 18), text: 'Planificación'),
+                Tab(icon: Icon(Icons.medication, size: 18), text: 'Suplementos'),
+                Tab(icon: Icon(Icons.restaurant, size: 18), text: 'Dieta'),
               ],
             ),
           ),
-
-          // CONTENIDO DE TABS
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
+                _InfoTab(user: widget.user),
                 _ProgramTab(userId: widget.user.id),
                 _PivotTab(userId: widget.user.id),
                 _PlanningTab(userId: widget.user.id),
@@ -110,129 +112,408 @@ class _UserDetailScreenState extends State<UserDetailScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       color: AppColors.white,
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Avatar
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.bluePrimary,
-                      AppColors.bluePrimary.withOpacity(0.7),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    widget.user.initial,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      color: AppColors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.user.name,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.user.email,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.purplePrimary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Plan: ${widget.user.plan}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.purplePrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Botón restablecer contraseña
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.tagProgress.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  onPressed: () => _showResetPasswordDialog(),
-                  icon: const Icon(
-                    Icons.lock_reset,
-                    color: AppColors.purplePrimary,
-                  ),
-                  tooltip: 'Restablecer contraseña',
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Fecha de registro
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.bluePrimary,
+                  AppColors.bluePrimary.withOpacity(0.7),
+                ],
+              ),
+              shape: BoxShape.circle,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: AppColors.textSecondary,
+            child: Center(
+              child: Text(
+                widget.user.initial,
+                style: const TextStyle(
+                  fontSize: 26,
+                  color: AppColors.white,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: 8),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Registrado: ${widget.user.formattedDate}',
+                  widget.user.fullDisplayName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.user.email,
                   style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
                   ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.purplePrimary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        widget.user.plan,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.purplePrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (widget.user.objective != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.tagWorkout,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          widget.user.objective!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.bluePrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showEditUserDialog() {
+    final fullNameCtrl = TextEditingController(text: widget.user.fullName);
+    final lastNameCtrl = TextEditingController(text: widget.user.lastName);
+    final ageCtrl = TextEditingController(text: widget.user.age?.toString() ?? '');
+    final weightCtrl = TextEditingController(text: widget.user.weight?.toString() ?? '');
+    final heightCtrl = TextEditingController(text: widget.user.height?.toString() ?? '');
+    final phoneCtrl = TextEditingController(text: widget.user.phone);
+    final notesCtrl = TextEditingController(text: widget.user.notes);
+    
+    String? selectedGender = widget.user.gender;
+    String? selectedObjective = widget.user.objective;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              backgroundColor: AppColors.white,
+              title: const Text(
+                'Editar Información del Usuario',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: fullNameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Nombre completo',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: lastNameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Apellido',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: ageCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Edad',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: selectedGender,
+                              decoration: InputDecoration(
+                                labelText: 'Género',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+                                DropdownMenuItem(value: 'Femenino', child: Text('Femenino')),
+                                DropdownMenuItem(value: 'Otro', child: Text('Otro')),
+                              ],
+                              onChanged: (value) {
+                                setDialogState(() => selectedGender = value);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: weightCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: InputDecoration(
+                                labelText: 'Peso (kg)',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: heightCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: InputDecoration(
+                                labelText: 'Altura (cm)',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedObjective,
+                        decoration: InputDecoration(
+                          labelText: 'Objetivo',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'Perder grasa', child: Text('Perder grasa')),
+                          DropdownMenuItem(value: 'Ganar músculo', child: Text('Ganar músculo')),
+                          DropdownMenuItem(value: 'Mantener', child: Text('Mantener')),
+                          DropdownMenuItem(value: 'Recomposición', child: Text('Recomposición')),
+                        ],
+                        onChanged: (value) {
+                          setDialogState(() => selectedObjective = value);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: phoneCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Teléfono',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // TextField(
+                      //   controller: notesCtrl,
+                      //   maxLines: 3,
+                      //   decoration: InputDecoration(
+                      //     labelText: 'Notas del administrador',
+                      //     border: OutlineInputBorder(
+                      //       borderRadius: BorderRadius.circular(12),
+                      //     ),
+                      //   ),
+                      // ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      final updateData = <String, dynamic>{};
+                      
+                      if (fullNameCtrl.text.isNotEmpty) {
+                        updateData['fullName'] = fullNameCtrl.text.trim();
+                      }
+                      if (lastNameCtrl.text.isNotEmpty) {
+                        updateData['lastName'] = lastNameCtrl.text.trim();
+                      }
+                      if (ageCtrl.text.isNotEmpty) {
+                        updateData['age'] = int.tryParse(ageCtrl.text) ?? 0;
+                      }
+                      if (weightCtrl.text.isNotEmpty) {
+                        updateData['weight'] = double.tryParse(weightCtrl.text) ?? 0.0;
+                      }
+                      if (heightCtrl.text.isNotEmpty) {
+                        updateData['height'] = double.tryParse(heightCtrl.text) ?? 0.0;
+                      }
+                      if (selectedGender != null) {
+                        updateData['gender'] = selectedGender;
+                      }
+                      if (selectedObjective != null) {
+                        updateData['objective'] = selectedObjective;
+                      }
+                      if (phoneCtrl.text.isNotEmpty) {
+                        updateData['phone'] = phoneCtrl.text.trim();
+                      }
+                      if (notesCtrl.text.isNotEmpty) {
+                        updateData['notes'] = notesCtrl.text.trim();
+                      }
+
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(widget.user.id)
+                          .update(updateData);
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        setState(() {}); // Recargar vista
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Información actualizada correctamente'),
+                            backgroundColor: AppColors.bluePrimary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red.shade600,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.bluePrimary,
+                    foregroundColor: AppColors.white,
+                  ),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textSecondary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.lock_reset, color: AppColors.bluePrimary),
+                title: const Text('Restablecer contraseña'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showResetPasswordDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.archive, color: AppColors.purplePrimary),
+                title: const Text('Archivar usuario'),
+                subtitle: const Text('El usuario ya no aparecerá en la lista'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmArchiveUser();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red.shade600),
+                title: const Text('Eliminar permanentemente'),
+                subtitle: const Text('Esta acción no se puede deshacer'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteUser();
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -316,7 +597,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
             ),
             ElevatedButton(
               onPressed: () async {
-                // TODO: Implementar reseteo de contraseña
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -336,60 +616,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               child: const Text('Restablecer'),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  void _showMoreOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.archive, color: AppColors.purplePrimary),
-                title: const Text('Archivar usuario'),
-                subtitle: const Text(
-                  'El usuario ya no aparecerá en la lista',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmArchiveUser();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.delete, color: Colors.red.shade600),
-                title: const Text('Eliminar permanentemente'),
-                subtitle: const Text(
-                  'Esta acción no se puede deshacer',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmDeleteUser();
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
         );
       },
     );
@@ -429,8 +655,8 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                       .update({'active': false});
 
                   if (context.mounted) {
-                    Navigator.pop(context); // Cerrar diálogo
-                    Navigator.pop(context); // Volver a lista
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                     
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -449,10 +675,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                       SnackBar(
                         content: Text('Error: $e'),
                         backgroundColor: Colors.red.shade600,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
                       ),
                     );
                   }
@@ -505,8 +727,8 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                       .delete();
 
                   if (context.mounted) {
-                    Navigator.pop(context); // Cerrar diálogo
-                    Navigator.pop(context); // Volver a lista
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                     
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -525,10 +747,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                       SnackBar(
                         content: Text('Error: $e'),
                         backgroundColor: Colors.red.shade600,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
                       ),
                     );
                   }
@@ -549,7 +767,139 @@ class _UserDetailScreenState extends State<UserDetailScreen>
   }
 }
 
-// Placeholder tabs (implementaremos después)
+// ==========================================
+// TAB DE INFORMACIÓN PERSONAL
+// ==========================================
+
+class _InfoTab extends StatelessWidget {
+  final UserModel user;
+  
+  const _InfoTab({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: _buildInfoCard([
+        // 1. Estado
+        _InfoRow(
+          icon: user.active ? Icons.check_circle : Icons.cancel,
+          label: 'Estado',
+          value: user.active ? 'Activo' : 'Inactivo',
+        ),
+        
+        // 2. Edad
+        _InfoRow(
+          icon: Icons.cake,
+          label: 'Edad',
+          value: user.age != null ? '${user.age} años' : '--',
+        ),
+
+        // 3. Altura
+        _InfoRow(
+          icon: Icons.height,
+          label: 'Altura',
+          value: user.height != null ? '${user.height!.toStringAsFixed(0)} cm' : '--',
+        ),
+
+        // 4. Peso
+        _InfoRow(
+          icon: Icons.monitor_weight_outlined,
+          label: 'Peso',
+          value: user.weight != null ? '${user.weight!.toStringAsFixed(1)} kg' : '--',
+        ),
+
+        // 5. Género
+        _InfoRow(
+          icon: Icons.wc,
+          label: 'Género',
+          value: user.gender ?? '--',
+        ),
+
+        // 6. Objetivo
+        _InfoRow(
+          icon: Icons.flag,
+          label: 'Objetivo',
+          value: user.objective ?? '--',
+        ),
+      ]),
+    );
+  }
+}
+Widget _buildInfoCard(List<_InfoRow> rows) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < rows.length; i++) ...[
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    rows[i].icon,
+                    color: AppColors.bluePrimary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rows[i].label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        rows[i].value,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (i < rows.length - 1) const Divider(height: 32),
+          ],
+        ],
+      ),
+    );
+  }
+
+
+class _InfoRow {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+}
+
+// ==========================================
+// OTROS TABS (Placeholders)
+// ==========================================
+
 class _ProgramTab extends StatelessWidget {
   final String userId;
   const _ProgramTab({required this.userId});
@@ -567,7 +917,7 @@ class _ProgramTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Tab de Programa',
+            'Programas de Entrenamiento',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -576,7 +926,7 @@ class _ProgramTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Próximamente',
+            'Aquí verás los programas asignados',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
@@ -605,7 +955,7 @@ class _PivotTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Tab de Pivot',
+            'Rendimiento del Usuario',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -614,7 +964,7 @@ class _PivotTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Próximamente',
+            'Aquí verás el progreso en los ejercicios',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
@@ -643,7 +993,7 @@ class _PlanningTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Tab de Planificación',
+            'Planificación Semanal',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -652,7 +1002,7 @@ class _PlanningTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Próximamente',
+            'Planificación que el cliente verá',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
@@ -681,7 +1031,7 @@ class _SupplementsTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Tab de Suplementos',
+            'Suplementos Asignados',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -690,7 +1040,7 @@ class _SupplementsTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Próximamente',
+            'Suplementos que el admin asigna',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
@@ -719,7 +1069,7 @@ class _DietTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Tab de Dieta',
+            'Dieta del Cliente',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -728,7 +1078,7 @@ class _DietTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Próximamente',
+            'Dieta escogida según indicaciones',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,

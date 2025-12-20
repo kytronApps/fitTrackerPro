@@ -918,24 +918,24 @@ class QuestionnaireDetailScreen extends StatelessWidget {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Notas del Administrador',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _showAddAdminNotes(context),
-                    icon: const Icon(Icons.edit, size: 18),
-                    color: AppColors.textSecondary,
-                  ),
-                ],
-              ),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //   children: [
+              //     const Text(
+              //       'Notas del Administrador',
+              //       style: TextStyle(
+              //         fontSize: 14,
+              //         fontWeight: FontWeight.w600,
+              //         color: AppColors.textPrimary,
+              //       ),
+              //     ),
+              //     IconButton(
+              //       onPressed: () => _showAddAdminNotes(context),
+              //       icon: const Icon(Icons.edit, size: 18),
+              //       color: AppColors.textSecondary,
+              //     ),
+              //   ],
+              // ),
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -1022,19 +1022,19 @@ class QuestionnaireDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
           backgroundColor: AppColors.white,
-          title: const Row(
-            children: [
-              Icon(Icons.edit_note, color: AppColors.bluePrimary),
-              SizedBox(width: 12),
-              Text(
-                'Notas del Administrador',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
+          // title: const Row(
+          //   children: [
+          //     Icon(Icons.edit_note, color: AppColors.bluePrimary),
+          //     SizedBox(width: 12),
+          //     Text(
+          //       'Notas del Administrador',
+          //       style: TextStyle(
+          //         fontSize: 18,
+          //         color: AppColors.textPrimary,
+          //       ),
+          //     ),
+          //   ],
+          // ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

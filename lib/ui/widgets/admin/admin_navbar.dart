@@ -37,10 +37,10 @@ class AdminNavBar extends StatelessWidget {
           icon: Icon(Icons.checklist_outlined),
           label: "Cuestionarios",
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.monitor_weight_outlined),
-          label: "Perímetros",
-        ),
+        // BottomNavigationBarItem(
+        //   icon: Icon(Icons.monitor_weight_outlined),
+        //   label: "Perímetros",
+        // ),
         BottomNavigationBarItem(
           icon: Icon(Icons.calendar_month_outlined),
           label: "Menús",

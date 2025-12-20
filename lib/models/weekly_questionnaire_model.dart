@@ -10,7 +10,7 @@ class WeeklyQuestionnaire {
   final String weekDate; // "2024-11-25"
   final DateTime createdAt;
   final bool reviewed;
-  final bool archived; // NUEVO: Para archivar cuestionarios
+  final bool archived;
   
   // Agujetas (1-10) por grupo muscular
   final int pectoral;
@@ -27,21 +27,21 @@ class WeeklyQuestionnaire {
   final int lumbar;
   
   // Preguntas generales
-  final int tiredness; // ¿Cómo de cansado te sientes? (1-10)
-  final int motivation; // ¿Cuánta motivación tienes al entrenar? (1-10)
-  final int dietCompliance; // ¿Qué cumplimiento haces de la dieta? (1-10)
-  final int recovery; // ¿Cómo de recuperado te sientes entre sesiones? (1-10)
-  final String recoveryNotes; // Si no recuperado, ¿a qué crees que se debe?
-  final String sleepHours; // ¿Cuántas horas has dormido de media?
-  final String importantNotes; // Notas importantes
+  final int tiredness;
+  final int motivation;
+  final int dietCompliance;
+  final int recovery;
+  final String recoveryNotes;
+  final String sleepHours;
+  final String importantNotes;
   
-  // Medidas antropométricas (proporcionadas por el usuario)
-  final double? bodyWeight; // peso_corporal en kg
-  final double? waist; // cintura en cm
-  final double? hips; // cadera en cm
-  final double? chest; // pecho en cm
-  final double? thigh; // muslo en cm
-  final String? adminNotes; // Notas del administrador sobre las medidas
+  // Medidas antropométricas
+  final double? bodyWeight;
+  final double? waist;
+  final double? hips;
+  final double? chest;
+  final double? thigh;
+  final String? adminNotes;
 
   WeeklyQuestionnaire({
     required this.id,
@@ -51,7 +51,7 @@ class WeeklyQuestionnaire {
     required this.weekDate,
     required this.createdAt,
     required this.reviewed,
-    this.archived = false, // Por defecto no archivado
+    this.archived = false,
     required this.pectoral,
     required this.dorsal,
     required this.deltoidAnterior,
@@ -79,6 +79,65 @@ class WeeklyQuestionnaire {
     this.adminNotes,
   });
 
+  // ========================================
+  // MÉTODOS AUXILIARES PARA CONVERSIÓN SEGURA
+  // ========================================
+  
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    
+    // Si ya es double, retornar directamente
+    if (value is double) return value;
+    
+    // Si es int, convertir a double
+    if (value is int) return value.toDouble();
+    
+    // Si es String, intentar parsear
+    if (value is String) {
+      try {
+        return double.parse(value.trim());
+      } catch (e) {
+        print('⚠️ Error parseando double desde String: "$value" - $e');
+        return null;
+      }
+    }
+    
+    print('⚠️ Tipo no soportado para conversión a double: ${value.runtimeType}');
+    return null;
+  }
+
+  static int _parseInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    
+    // Si ya es int, retornar directamente
+    if (value is int) return value;
+    
+    // Si es double, convertir a int
+    if (value is double) return value.toInt();
+    
+    // Si es String, intentar parsear
+    if (value is String) {
+      try {
+        return int.parse(value.trim());
+      } catch (e) {
+        // Si no puede parsear como int, intentar como double primero
+        try {
+          return double.parse(value.trim()).toInt();
+        } catch (e2) {
+          print('⚠️ Error parseando int desde String: "$value" - $e');
+          return defaultValue;
+        }
+      }
+    }
+    
+    print('⚠️ Tipo no soportado para conversión a int: ${value.runtimeType}');
+    return defaultValue;
+  }
+
+  // ========================================
+  // FACTORY CONSTRUCTOR
+  // ========================================
+
   factory WeeklyQuestionnaire.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
@@ -90,31 +149,38 @@ class WeeklyQuestionnaire {
       weekDate: data['weekDate'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       reviewed: data['reviewed'] ?? false,
-      archived: data['archived'] ?? false, // NUEVO
-      pectoral: data['pectoral'] ?? 0,
-      dorsal: data['dorsal'] ?? 0,
-      deltoidAnterior: data['deltoidAnterior'] ?? 0,
-      deltoidLateral: data['deltoidLateral'] ?? 0,
-      deltoidPosterior: data['deltoidPosterior'] ?? 0,
-      quadriceps: data['quadriceps'] ?? 0,
-      adductors: data['adductors'] ?? 0,
-      hamstrings: data['hamstrings'] ?? 0,
-      glutes: data['glutes'] ?? 0,
-      biceps: data['biceps'] ?? 0,
-      triceps: data['triceps'] ?? 0,
-      lumbar: data['lumbar'] ?? 0,
-      tiredness: data['tiredness'] ?? 0,
-      motivation: data['motivation'] ?? 0,
-      dietCompliance: data['dietCompliance'] ?? 0,
-      recovery: data['recovery'] ?? 0,
+      archived: data['archived'] ?? false,
+      
+      // Agujetas - usar _parseInt para manejar cualquier tipo
+      pectoral: _parseInt(data['pectoral']),
+      dorsal: _parseInt(data['dorsal']),
+      deltoidAnterior: _parseInt(data['deltoidAnterior']),
+      deltoidLateral: _parseInt(data['deltoidLateral']),
+      deltoidPosterior: _parseInt(data['deltoidPosterior']),
+      quadriceps: _parseInt(data['quadriceps']),
+      adductors: _parseInt(data['adductors']),
+      hamstrings: _parseInt(data['hamstrings']),
+      glutes: _parseInt(data['glutes']),
+      biceps: _parseInt(data['biceps']),
+      triceps: _parseInt(data['triceps']),
+      lumbar: _parseInt(data['lumbar']),
+      
+      // Preguntas generales
+      tiredness: _parseInt(data['tiredness']),
+      motivation: _parseInt(data['motivation']),
+      dietCompliance: _parseInt(data['dietCompliance']),
+      recovery: _parseInt(data['recovery']),
       recoveryNotes: data['recoveryNotes'] ?? '',
       sleepHours: data['sleepHours'] ?? '',
       importantNotes: data['importantNotes'] ?? '',
-      bodyWeight: data['peso_corporal']?.toDouble(),
-      waist: data['cintura']?.toDouble(),
-      hips: data['cadera']?.toDouble(),
-      chest: data['pecho']?.toDouble(),
-      thigh: data['muslo']?.toDouble(),
+      
+      // Medidas antropométricas - USAR _parseDouble
+      bodyWeight: _parseDouble(data['peso_corporal']),
+      waist: _parseDouble(data['cintura']),
+      hips: _parseDouble(data['cadera']),
+      chest: _parseDouble(data['pecho']),
+      thigh: _parseDouble(data['muslo']),
+      
       adminNotes: data['adminNotes'],
     );
   }
@@ -127,7 +193,7 @@ class WeeklyQuestionnaire {
       'weekDate': weekDate,
       'createdAt': Timestamp.fromDate(createdAt),
       'reviewed': reviewed,
-      'archived': archived, // NUEVO
+      'archived': archived,
       'pectoral': pectoral,
       'dorsal': dorsal,
       'deltoidAnterior': deltoidAnterior,
@@ -147,6 +213,7 @@ class WeeklyQuestionnaire {
       'recoveryNotes': recoveryNotes,
       'sleepHours': sleepHours,
       'importantNotes': importantNotes,
+      // Guardar medidas como double (números, no strings)
       if (bodyWeight != null) 'peso_corporal': bodyWeight,
       if (waist != null) 'cintura': waist,
       if (hips != null) 'cadera': hips,
@@ -156,7 +223,10 @@ class WeeklyQuestionnaire {
     };
   }
 
-  // Promedio de agujetas
+  // ========================================
+  // GETTERS Y UTILIDADES
+  // ========================================
+
   double get averageSoreness {
     final total = pectoral + dorsal + deltoidAnterior + deltoidLateral +
         deltoidPosterior + quadriceps + adductors + hamstrings +
@@ -164,10 +234,8 @@ class WeeklyQuestionnaire {
     return total / 12;
   }
 
-  // Obtener inicial del nombre
   String get initial => userName.isNotEmpty ? userName[0].toUpperCase() : '?';
 
-  // Formatear fecha
   String get formattedWeekDate {
     try {
       final parts = weekDate.split('-');
@@ -180,7 +248,6 @@ class WeeklyQuestionnaire {
     }
   }
 
-  // Tiempo desde creación
   String get timeAgo {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
@@ -206,7 +273,7 @@ class WeeklyQuestionnaire {
     String? weekDate,
     DateTime? createdAt,
     bool? reviewed,
-    bool? archived, // NUEVO
+    bool? archived,
     int? pectoral,
     int? dorsal,
     int? deltoidAnterior,
@@ -241,7 +308,7 @@ class WeeklyQuestionnaire {
       weekDate: weekDate ?? this.weekDate,
       createdAt: createdAt ?? this.createdAt,
       reviewed: reviewed ?? this.reviewed,
-      archived: archived ?? this.archived, // NUEVO
+      archived: archived ?? this.archived,
       pectoral: pectoral ?? this.pectoral,
       dorsal: dorsal ?? this.dorsal,
       deltoidAnterior: deltoidAnterior ?? this.deltoidAnterior,
