@@ -1,5 +1,4 @@
-// lib/ui/screens/admin/user_detail_screen.dart
-
+import 'package:fittrackerpro/ui/views/views.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../app/theme/colors.dart';
@@ -8,10 +7,7 @@ import '../../../models/models.dart';
 class UserDetailScreen extends StatefulWidget {
   final UserModel user;
 
-  const UserDetailScreen({
-    super.key,
-    required this.user,
-  });
+  const UserDetailScreen({super.key, required this.user});
 
   @override
   State<UserDetailScreen> createState() => _UserDetailScreenState();
@@ -41,7 +37,11 @@ class _UserDetailScreenState extends State<UserDetailScreen>
         elevation: 0,
         backgroundColor: AppColors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            size: 20,
+            color: AppColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -82,10 +82,19 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               ),
               tabs: const [
                 Tab(icon: Icon(Icons.info_outline, size: 18), text: 'Info'),
-                Tab(icon: Icon(Icons.fitness_center, size: 18), text: 'Programa'),
+                Tab(
+                  icon: Icon(Icons.fitness_center, size: 18),
+                  text: 'Programa',
+                ),
                 Tab(icon: Icon(Icons.trending_up, size: 18), text: 'Pivot'),
-                Tab(icon: Icon(Icons.calendar_today, size: 18), text: 'Planificación'),
-                Tab(icon: Icon(Icons.medication, size: 18), text: 'Suplementos'),
+                Tab(
+                  icon: Icon(Icons.calendar_today, size: 18),
+                  text: 'Planificación',
+                ),
+                Tab(
+                  icon: Icon(Icons.medication, size: 18),
+                  text: 'Suplementos',
+                ),
                 Tab(icon: Icon(Icons.restaurant, size: 18), text: 'Dieta'),
               ],
             ),
@@ -95,7 +104,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               controller: _tabController,
               children: [
                 _InfoTab(user: widget.user),
-                _ProgramTab(userId: widget.user.id),
+
+                // ✅ PROGRAMA REAL
+                AdminProgramUsersView(userId: widget.user.id),
+
                 _PivotTab(userId: widget.user.id),
                 _PlanningTab(userId: widget.user.id),
                 _SupplementsTab(userId: widget.user.id),
@@ -159,49 +171,6 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.purplePrimary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        widget.user.plan,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.purplePrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (widget.user.objective != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.tagWorkout,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          widget.user.objective!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.bluePrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
               ],
             ),
           ),
@@ -213,12 +182,18 @@ class _UserDetailScreenState extends State<UserDetailScreen>
   void _showEditUserDialog() {
     final fullNameCtrl = TextEditingController(text: widget.user.fullName);
     final lastNameCtrl = TextEditingController(text: widget.user.lastName);
-    final ageCtrl = TextEditingController(text: widget.user.age?.toString() ?? '');
-    final weightCtrl = TextEditingController(text: widget.user.weight?.toString() ?? '');
-    final heightCtrl = TextEditingController(text: widget.user.height?.toString() ?? '');
+    final ageCtrl = TextEditingController(
+      text: widget.user.age?.toString() ?? '',
+    );
+    final weightCtrl = TextEditingController(
+      text: widget.user.weight?.toString() ?? '',
+    );
+    final heightCtrl = TextEditingController(
+      text: widget.user.height?.toString() ?? '',
+    );
     final phoneCtrl = TextEditingController(text: widget.user.phone);
     final notesCtrl = TextEditingController(text: widget.user.notes);
-    
+
     String? selectedGender = widget.user.gender;
     String? selectedObjective = widget.user.objective;
 
@@ -234,10 +209,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               backgroundColor: AppColors.white,
               title: const Text(
                 'Editar Información del Usuario',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: AppColors.textPrimary,
-                ),
+                style: TextStyle(fontSize: 18, color: AppColors.textPrimary),
               ),
               content: SingleChildScrollView(
                 child: SizedBox(
@@ -290,9 +262,18 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                                 ),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
-                                DropdownMenuItem(value: 'Femenino', child: Text('Femenino')),
-                                DropdownMenuItem(value: 'Otro', child: Text('Otro')),
+                                DropdownMenuItem(
+                                  value: 'Masculino',
+                                  child: Text('Masculino'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Femenino',
+                                  child: Text('Femenino'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Otro',
+                                  child: Text('Otro'),
+                                ),
                               ],
                               onChanged: (value) {
                                 setDialogState(() => selectedGender = value);
@@ -307,7 +288,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                           Expanded(
                             child: TextField(
                               controller: weightCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 labelText: 'Peso (kg)',
                                 border: OutlineInputBorder(
@@ -320,7 +304,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                           Expanded(
                             child: TextField(
                               controller: heightCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 labelText: 'Altura (cm)',
                                 border: OutlineInputBorder(
@@ -341,10 +328,22 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                           ),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'Perder grasa', child: Text('Perder grasa')),
-                          DropdownMenuItem(value: 'Ganar músculo', child: Text('Ganar músculo')),
-                          DropdownMenuItem(value: 'Mantener', child: Text('Mantener')),
-                          DropdownMenuItem(value: 'Recomposición', child: Text('Recomposición')),
+                          DropdownMenuItem(
+                            value: 'Perder grasa',
+                            child: Text('Perder grasa'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Ganar músculo',
+                            child: Text('Ganar músculo'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Mantener',
+                            child: Text('Mantener'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Recomposición',
+                            child: Text('Recomposición'),
+                          ),
                         ],
                         onChanged: (value) {
                           setDialogState(() => selectedObjective = value);
@@ -387,7 +386,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   onPressed: () async {
                     try {
                       final updateData = <String, dynamic>{};
-                      
+
                       if (fullNameCtrl.text.isNotEmpty) {
                         updateData['fullName'] = fullNameCtrl.text.trim();
                       }
@@ -398,10 +397,12 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                         updateData['age'] = int.tryParse(ageCtrl.text) ?? 0;
                       }
                       if (weightCtrl.text.isNotEmpty) {
-                        updateData['weight'] = double.tryParse(weightCtrl.text) ?? 0.0;
+                        updateData['weight'] =
+                            double.tryParse(weightCtrl.text) ?? 0.0;
                       }
                       if (heightCtrl.text.isNotEmpty) {
-                        updateData['height'] = double.tryParse(heightCtrl.text) ?? 0.0;
+                        updateData['height'] =
+                            double.tryParse(heightCtrl.text) ?? 0.0;
                       }
                       if (selectedGender != null) {
                         updateData['gender'] = selectedGender;
@@ -424,10 +425,12 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                       if (context.mounted) {
                         Navigator.pop(context);
                         setState(() {}); // Recargar vista
-                        
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Información actualizada correctamente'),
+                            content: const Text(
+                              'Información actualizada correctamente',
+                            ),
                             backgroundColor: AppColors.bluePrimary,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(
@@ -484,7 +487,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               ),
               const SizedBox(height: 20),
               ListTile(
-                leading: const Icon(Icons.lock_reset, color: AppColors.bluePrimary),
+                leading: const Icon(
+                  Icons.lock_reset,
+                  color: AppColors.bluePrimary,
+                ),
                 title: const Text('Restablecer contraseña'),
                 onTap: () {
                   Navigator.pop(context);
@@ -492,7 +498,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.archive, color: AppColors.purplePrimary),
+                leading: const Icon(
+                  Icons.archive,
+                  color: AppColors.purplePrimary,
+                ),
                 title: const Text('Archivar usuario'),
                 subtitle: const Text('El usuario ya no aparecerá en la lista'),
                 onTap: () {
@@ -581,7 +590,10 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.bluePrimary, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.bluePrimary,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -600,7 +612,9 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Contraseña restablecida correctamente'),
+                    content: const Text(
+                      'Contraseña restablecida correctamente',
+                    ),
                     backgroundColor: AppColors.purplePrimary,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
@@ -657,7 +671,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   if (context.mounted) {
                     Navigator.pop(context);
                     Navigator.pop(context);
-                    
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('Usuario archivado correctamente'),
@@ -729,10 +743,12 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   if (context.mounted) {
                     Navigator.pop(context);
                     Navigator.pop(context);
-                    
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('Usuario eliminado permanentemente'),
+                        content: const Text(
+                          'Usuario eliminado permanentemente',
+                        ),
                         backgroundColor: Colors.red.shade600,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
@@ -773,7 +789,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
 
 class _InfoTab extends StatelessWidget {
   final UserModel user;
-  
+
   const _InfoTab({required this.user});
 
   @override
@@ -787,7 +803,7 @@ class _InfoTab extends StatelessWidget {
           label: 'Estado',
           value: user.active ? 'Activo' : 'Inactivo',
         ),
-        
+
         // 2. Edad
         _InfoRow(
           icon: Icons.cake,
@@ -799,22 +815,22 @@ class _InfoTab extends StatelessWidget {
         _InfoRow(
           icon: Icons.height,
           label: 'Altura',
-          value: user.height != null ? '${user.height!.toStringAsFixed(0)} cm' : '--',
+          value: user.height != null
+              ? '${user.height!.toStringAsFixed(0)} cm'
+              : '--',
         ),
 
         // 4. Peso
         _InfoRow(
           icon: Icons.monitor_weight_outlined,
           label: 'Peso',
-          value: user.weight != null ? '${user.weight!.toStringAsFixed(1)} kg' : '--',
+          value: user.weight != null
+              ? '${user.weight!.toStringAsFixed(1)} kg'
+              : '--',
         ),
 
         // 5. Género
-        _InfoRow(
-          icon: Icons.wc,
-          label: 'Género',
-          value: user.gender ?? '--',
-        ),
+        _InfoRow(icon: Icons.wc, label: 'Género', value: user.gender ?? '--'),
 
         // 6. Objetivo
         _InfoRow(
@@ -822,121 +838,92 @@ class _InfoTab extends StatelessWidget {
           label: 'Objetivo',
           value: user.objective ?? '--',
         ),
+        // 7. Teléfono
+        _InfoRow(
+          icon: Icons.phone,
+          label: 'Teléfono',
+          value: user.phone ?? '--',
+        ),
+
+        // 8. Plan
+        _InfoRow(
+          icon: Icons.workspace_premium,
+          label: 'Plan',
+          value: user.plan,
+        ),
       ]),
     );
   }
 }
-Widget _buildInfoCard(List<_InfoRow> rows) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          for (int i = 0; i < rows.length; i++) ...[
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    rows[i].icon,
-                    color: AppColors.bluePrimary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        rows[i].label,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        rows[i].value,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (i < rows.length - 1) const Divider(height: 32),
-          ],
-        ],
-      ),
-    );
-  }
 
+Widget _buildInfoCard(List<_InfoRow> rows) {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      children: [
+        for (int i = 0; i < rows.length; i++) ...[
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  rows[i].icon,
+                  color: AppColors.bluePrimary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rows[i].label,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      rows[i].value,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (i < rows.length - 1) const Divider(height: 32),
+        ],
+      ],
+    ),
+  );
+}
 
 class _InfoRow {
   final IconData icon;
   final String label;
   final String value;
 
-  _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  _InfoRow({required this.icon, required this.label, required this.value});
 }
 
 // ==========================================
 // OTROS TABS (Placeholders)
 // ==========================================
-
-class _ProgramTab extends StatelessWidget {
-  final String userId;
-  const _ProgramTab({required this.userId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.fitness_center,
-            size: 80,
-            color: AppColors.textSecondary.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Programas de Entrenamiento',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Aquí verás los programas asignados',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PivotTab extends StatelessWidget {
   final String userId;
@@ -965,10 +952,7 @@ class _PivotTab extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Aquí verás el progreso en los ejercicios',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -1003,10 +987,7 @@ class _PlanningTab extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Planificación que el cliente verá',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -1041,10 +1022,7 @@ class _SupplementsTab extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Suplementos que el admin asigna',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -1079,10 +1057,7 @@ class _DietTab extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Dieta escogida según indicaciones',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),

@@ -41,14 +41,14 @@ class AdminNavBar extends StatelessWidget {
         //   icon: Icon(Icons.monitor_weight_outlined),
         //   label: "Perímetros",
         // ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_month_outlined),
-          label: "Menús",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calculate_outlined),
-          label: "Calculadora",
-        ),
+        // BottomNavigationBarItem(
+        //   icon: Icon(Icons.calendar_month_outlined),
+        //   label: "Menús",
+        // ),
+        // BottomNavigationBarItem(
+        //   icon: Icon(Icons.calculate_outlined),
+        //   label: "Calculadora",
+        // ),
 
         // 🔥 BOTÓN LOGOUT EN EL MENÚ
         BottomNavigationBarItem(

@@ -22,9 +22,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final List<Widget> views = const [
     AdminUsersView(),
     AdminWeeklyView(),
-    AdminMetricsView(),
-    AdminMenusView(),
-    AdminCalculatorView(),
+    // AdminMetricsView(),
+    //AdminMenusView(),
   ];
 
   @override
