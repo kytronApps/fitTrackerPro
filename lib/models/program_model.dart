@@ -8,14 +8,14 @@ class ProgramExercise {
   final String name;
   final int sets;
   final String reps;
-  final int rpe;
+  final int? rpe;
 
   ProgramExercise({
     required this.order,
     required this.name,
     required this.sets,
     required this.reps,
-    required this.rpe,
+    this.rpe,
   });
 
   factory ProgramExercise.fromMap(Map<String, dynamic> map) {
@@ -24,7 +24,7 @@ class ProgramExercise {
       name: map['name'] ?? '',
       sets: map['sets'] ?? 0,
       reps: map['reps'] ?? '',
-      rpe: map['rpe'] ?? 0,
+      rpe: map['rpe'],
     );
   }
 
@@ -34,7 +34,7 @@ class ProgramExercise {
       'name': name,
       'sets': sets,
       'reps': reps,
-      'rpe': rpe,
+      if (rpe != null) 'rpe': rpe,
     };
   }
 
