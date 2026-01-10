@@ -27,7 +27,6 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   // CREAR PROGRAMA
   // ─────────────────────────────────────
   void _openCreateProgramDialog() {
-    // Limpiar estado anterior
     _programNameCtrl.clear();
     _exercises.clear();
 
@@ -116,7 +115,7 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   }
 
   // ─────────────────────────────────────
-  // AÑADIR EJERCICIO
+  // AÑADIR EJERCICIO (para crear programa)
   // ─────────────────────────────────────
   void _openAddExerciseDialog(StateSetter setDialogState) {
     final nameCtrl = TextEditingController();
@@ -181,7 +180,6 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                 final reps = repsCtrl.text.trim();
                 final rpe = int.tryParse(rpeCtrl.text.trim());
 
-                // Validaciones
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -217,10 +215,6 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                   rpe: rpe,
                 );
 
-                debugPrint(
-                  'Ejercicio añadido: ${exercise.name}, Series: ${exercise.sets}, Reps: ${exercise.reps}, RPE: ${exercise.rpe}',
-                );
-
                 setDialogState(() {
                   _exercises.add(exercise);
                 });
@@ -244,7 +238,6 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
 
       final programsRef = FirebaseFirestore.instance.collection('program');
 
-      // Buscar programa activo actual
       final activeQuery = await programsRef
           .where('id_user', isEqualTo: widget.userId)
           .where('active', isEqualTo: true)
@@ -253,7 +246,6 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
 
       int nextBlock = 1;
 
-      // Si existe un programa activo, desactivarlo
       if (activeQuery.docs.isNotEmpty) {
         final activeDoc = activeQuery.docs.first;
         nextBlock = (activeDoc['block_number'] as int) + 1;
@@ -262,24 +254,12 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
           'active': false,
           'finished_at': Timestamp.now(),
         });
-
-        debugPrint('✅ Programa anterior desactivado: Bloque ${activeDoc['block_number']}');
       }
 
-      // Nombre del programa
       final programName = _programNameCtrl.text.trim().isNotEmpty
           ? _programNameCtrl.text.trim()
           : 'Bloque $nextBlock';
 
-      debugPrint('💾 Guardando programa: $programName');
-      debugPrint('📋 Ejercicios (${_exercises.length}):');
-      for (var exercise in _exercises) {
-        debugPrint(
-          '  ${exercise.order}. ${exercise.name}: ${exercise.sets} series, ${exercise.reps} reps${exercise.rpe != null ? ", RPE: ${exercise.rpe}" : ""}',
-        );
-      }
-
-      // Crear nuevo programa
       final newProgram = ProgramModel(
         id: '',
         userId: widget.userId,
@@ -292,16 +272,12 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
 
       await programsRef.add(newProgram.toFirestore());
 
-      debugPrint('✅ Programa guardado exitosamente');
-
-      // Limpiar y cerrar
       _programNameCtrl.clear();
       _exercises.clear();
 
       if (mounted) {
         Navigator.pop(context);
         
-        // Mostrar confirmación
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Programa "$programName" creado exitosamente'),
@@ -319,6 +295,312 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  // ─────────────────────────────────────
+  // AÑADIR EJERCICIO A PROGRAMA EXISTENTE
+  // ─────────────────────────────────────
+  Future<void> _addExerciseToProgram(String programId, List<ProgramExercise> currentExercises) async {
+    final nameCtrl = TextEditingController();
+    final setsCtrl = TextEditingController();
+    final repsCtrl = TextEditingController();
+    final rpeCtrl = TextEditingController();
+
+    final result = await showDialog<ProgramExercise>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Añadir ejercicio'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Ejercicio',
+                    hintText: 'Ej: Press banca',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: setsCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Series',
+                    hintText: 'Ej: 4',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: repsCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Repeticiones',
+                    hintText: 'Ej: 8-12 o 10',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: rpeCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'RPE (opcional)',
+                    hintText: 'Ej: 8',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final sets = int.tryParse(setsCtrl.text.trim());
+                final reps = repsCtrl.text.trim();
+                final rpe = int.tryParse(rpeCtrl.text.trim());
+
+                if (name.isEmpty || sets == null || sets <= 0 || reps.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Por favor completa todos los campos'),
+                    ),
+                  );
+                  return;
+                }
+
+                final exercise = ProgramExercise(
+                  order: currentExercises.length + 1,
+                  name: name,
+                  sets: sets,
+                  reps: reps,
+                  rpe: rpe,
+                );
+
+                Navigator.pop(context, exercise);
+              },
+              child: const Text('Añadir'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      try {
+        final updatedExercises = [...currentExercises, result];
+        
+        await FirebaseFirestore.instance
+            .collection('program')
+            .doc(programId)
+            .update({
+          'exercises': updatedExercises.map((e) => e.toMap()).toList(),
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ejercicio añadido correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al añadir ejercicio: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // ─────────────────────────────────────
+  // EDITAR EJERCICIO
+  // ─────────────────────────────────────
+  Future<void> _editExercise(String programId, int index, ProgramExercise exercise, List<ProgramExercise> allExercises) async {
+    final nameCtrl = TextEditingController(text: exercise.name);
+    final setsCtrl = TextEditingController(text: exercise.sets.toString());
+    final repsCtrl = TextEditingController(text: exercise.reps);
+    final rpeCtrl = TextEditingController(text: exercise.rpe?.toString() ?? '');
+
+    final result = await showDialog<ProgramExercise>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Editar ejercicio'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Ejercicio'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: setsCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Series'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: repsCtrl,
+                  decoration: const InputDecoration(labelText: 'Repeticiones'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: rpeCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'RPE (opcional)'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final sets = int.tryParse(setsCtrl.text.trim());
+                final reps = repsCtrl.text.trim();
+                final rpe = int.tryParse(rpeCtrl.text.trim());
+
+                if (name.isEmpty || sets == null || sets <= 0 || reps.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Por favor completa todos los campos'),
+                    ),
+                  );
+                  return;
+                }
+
+                final updatedExercise = ProgramExercise(
+                  order: exercise.order,
+                  name: name,
+                  sets: sets,
+                  reps: reps,
+                  rpe: rpe,
+                );
+
+                Navigator.pop(context, updatedExercise);
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      try {
+        final updatedExercises = [...allExercises];
+        updatedExercises[index] = result;
+
+        await FirebaseFirestore.instance
+            .collection('program')
+            .doc(programId)
+            .update({
+          'exercises': updatedExercises.map((e) => e.toMap()).toList(),
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ejercicio actualizado correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al actualizar ejercicio: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // ─────────────────────────────────────
+  // ELIMINAR EJERCICIO
+  // ─────────────────────────────────────
+  Future<void> _deleteExercise(String programId, int index, List<ProgramExercise> allExercises) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Eliminar ejercicio'),
+          content: Text('¿Estás seguro de eliminar "${allExercises[index].name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      try {
+        final updatedExercises = [...allExercises];
+        updatedExercises.removeAt(index);
+
+        // Reordenar los ejercicios
+        for (int i = 0; i < updatedExercises.length; i++) {
+          updatedExercises[i] = ProgramExercise(
+            order: i + 1,
+            name: updatedExercises[i].name,
+            sets: updatedExercises[i].sets,
+            reps: updatedExercises[i].reps,
+            rpe: updatedExercises[i].rpe,
+          );
+        }
+
+        await FirebaseFirestore.instance
+            .collection('program')
+            .doc(programId)
+            .update({
+          'exercises': updatedExercises.map((e) => e.toMap()).toList(),
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ejercicio eliminado correctamente'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al eliminar ejercicio: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -366,13 +648,16 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                   return _EmptyProgramState(onCreate: _openCreateProgramDialog);
                 }
 
-                final program = ProgramModel.fromFirestore(
-                  snapshot.data!.docs.first,
-                );
+                final doc = snapshot.data!.docs.first;
+                final program = ProgramModel.fromFirestore(doc);
 
                 return _ActiveProgramCard(
                   program: program,
+                  programId: doc.id,
                   onCreateNew: _openCreateProgramDialog,
+                  onAddExercise: () => _addExerciseToProgram(doc.id, program.exercises),
+                  onEditExercise: (index, exercise) => _editExercise(doc.id, index, exercise, program.exercises),
+                  onDeleteExercise: (index) => _deleteExercise(doc.id, index, program.exercises),
                 );
               },
             ),
@@ -437,34 +722,56 @@ class _EmptyProgramState extends StatelessWidget {
 /// =================================================
 class _ActiveProgramCard extends StatelessWidget {
   final ProgramModel program;
+  final String programId;
   final VoidCallback onCreateNew;
+  final VoidCallback onAddExercise;
+  final Function(int index, ProgramExercise exercise) onEditExercise;
+  final Function(int index) onDeleteExercise;
 
   const _ActiveProgramCard({
     required this.program,
+    required this.programId,
     required this.onCreateNew,
+    required this.onAddExercise,
+    required this.onEditExercise,
+    required this.onDeleteExercise,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Botón para crear nuevo programa
-        Align(
-          alignment: Alignment.centerRight,
-          child: ElevatedButton.icon(
-            onPressed: onCreateNew,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Nuevo programa'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.bluePrimary,
-              foregroundColor: AppColors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        // Botones superiores
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onAddExercise,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Añadir ejercicio'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: onCreateNew,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Nuevo programa'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.bluePrimary,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
-        // Tarjeta del programa activo
+        // Tarjeta del programa
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -525,60 +832,80 @@ class _ActiveProgramCard extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 Expanded(
-                  child: ListView.separated(
-                    itemCount: program.exercises.length,
-                    separatorBuilder: (_, __) => const Divider(height: 24),
-                    itemBuilder: (context, index) {
-                      final e = program.exercises[index];
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: AppColors.bluePrimary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${e.order}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: AppColors.bluePrimary,
-                                ),
-                              ),
-                            ),
+                  child: program.exercises.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No hay ejercicios en este programa',
+                            style: TextStyle(color: AppColors.textSecondary),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
+                        )
+                      : ListView.separated(
+                          itemCount: program.exercises.length,
+                          separatorBuilder: (_, __) => const Divider(height: 24),
+                          itemBuilder: (context, index) {
+                            final e = program.exercises[index];
+                            return Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  e.name,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.bluePrimary.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${e.order}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: AppColors.bluePrimary,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  e.displayFormat,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.textSecondary,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        e.name,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        e.displayFormat,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                ),
+                                // Botones de acción
+                                IconButton(
+                                  icon: const Icon(Icons.edit, size: 20),
+                                  color: AppColors.bluePrimary,
+                                  onPressed: () => onEditExercise(index, e),
+                                  tooltip: 'Editar',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, size: 20),
+                                  color: Colors.red,
+                                  onPressed: () => onDeleteExercise(index),
+                                  tooltip: 'Eliminar',
                                 ),
                               ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
