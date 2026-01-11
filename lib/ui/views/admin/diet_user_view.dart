@@ -19,6 +19,7 @@ class DietUsersView extends StatefulWidget {
 
 class _DietUsersViewState extends State<DietUsersView> {
   DateTime _selectedDate = DateTime.now();
+  String _selectedCategory = 'Todos';
 
   // ─────────────────────────────────────
   // SUBIR EXCEL CON LISTA DE ALIMENTOS
@@ -27,7 +28,6 @@ class _DietUsersViewState extends State<DietUsersView> {
     BuildContext? dialogContext;
     
     try {
-      // Seleccionar archivo Excel - CON MANEJO DE ERROR DE PLATAFORMA
       FilePickerResult? result;
       
       try {
@@ -39,7 +39,6 @@ class _DietUsersViewState extends State<DietUsersView> {
         );
       } catch (pickerError) {
         debugPrint('Error con FilePicker.platform: $pickerError');
-        // Intentar método alternativo
         result = await FilePicker.platform.pickFiles(
           type: FileType.any,
           withData: true,
@@ -54,7 +53,6 @@ class _DietUsersViewState extends State<DietUsersView> {
         throw Exception('No se pudo leer el archivo');
       }
 
-      // Mostrar diálogo de carga
       if (mounted) {
         showDialog(
           context: context,
@@ -68,23 +66,19 @@ class _DietUsersViewState extends State<DietUsersView> {
         );
       }
 
-      // Dar un pequeño delay para que el diálogo se muestre
       await Future.delayed(const Duration(milliseconds: 100));
 
-      // Leer Excel con manejo correcto y protección adicional
       late Excel excel;
       
       try {
-        // Intentar decodificar con List<int>
         excel = Excel.decodeBytes(List<int>.from(bytes));
       } catch (e1) {
         debugPrint('Error con List<int>, intentando con bytes directos: $e1');
         try {
-          // Intentar con bytes directos
           excel = Excel.decodeBytes(bytes);
         } catch (e2) {
           debugPrint('Error con bytes directos: $e2');
-          throw Exception('No se pudo leer el formato del archivo Excel. Asegúrate de que sea un archivo .xlsx válido');
+          throw Exception('No se pudo leer el formato del archivo Excel');
         }
       }
       
@@ -104,13 +98,10 @@ class _DietUsersViewState extends State<DietUsersView> {
 
       int addedCount = 0;
 
-      // Leer columnas: A (Hidratos), B (Proteínas), C (Grasas), D (1/2 Proteína)
-      // Empezar desde la fila 1 (índice 0 son headers)
       for (int i = 1; i < sheet.rows.length; i++) {
         final row = sheet.rows[i];
         
         try {
-          // Columna A: HIDRATOS DE CARBONO
           if (row.length > 0 && row[0] != null && row[0]!.value != null) {
             final value = row[0]!.value.toString().trim();
             if (value.isNotEmpty && 
@@ -126,7 +117,6 @@ class _DietUsersViewState extends State<DietUsersView> {
             }
           }
 
-          // Columna B: PROTEINAS
           if (row.length > 1 && row[1] != null && row[1]!.value != null) {
             final value = row[1]!.value.toString().trim();
             if (value.isNotEmpty && !value.toUpperCase().contains('PROTEINA')) {
@@ -140,7 +130,6 @@ class _DietUsersViewState extends State<DietUsersView> {
             }
           }
 
-          // Columna C: GRASAS
           if (row.length > 2 && row[2] != null && row[2]!.value != null) {
             final value = row[2]!.value.toString().trim();
             if (value.isNotEmpty && !value.toUpperCase().contains('GRASAS')) {
@@ -154,7 +143,6 @@ class _DietUsersViewState extends State<DietUsersView> {
             }
           }
 
-          // Columna D: 1/2 PROTEINA
           if (row.length > 3 && row[3] != null && row[3]!.value != null) {
             final value = row[3]!.value.toString().trim();
             if (value.isNotEmpty && 
@@ -171,7 +159,6 @@ class _DietUsersViewState extends State<DietUsersView> {
           }
         } catch (rowError) {
           debugPrint('Error procesando fila $i: $rowError');
-          // Continuar con la siguiente fila
         }
       }
 
@@ -179,7 +166,6 @@ class _DietUsersViewState extends State<DietUsersView> {
         await batch.commit();
       }
 
-      // Cerrar diálogo de carga
       if (dialogContext != null && mounted) {
         Navigator.of(dialogContext!).pop();
       }
@@ -201,7 +187,6 @@ class _DietUsersViewState extends State<DietUsersView> {
       debugPrint('Error detallado al importar Excel: $e');
       debugPrint('Stack trace: $stackTrace');
       
-      // Cerrar diálogo de carga si está abierto
       if (dialogContext != null && mounted) {
         try {
           Navigator.of(dialogContext!).pop();
@@ -221,7 +206,7 @@ class _DietUsersViewState extends State<DietUsersView> {
   }
 
   // ─────────────────────────────────────
-  // MOSTRAR CONSIDERACIONES GENERALES
+  // MOSTRAR CONSIDERACIONES
   // ─────────────────────────────────────
   void _showDietConsiderations() {
     showDialog(
@@ -248,30 +233,12 @@ class _DietUsersViewState extends State<DietUsersView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildConsiderationItem(
-                  '📏',
-                  'Todo se pesa en crudo y en seco, salvo excepciones como la legumbre en conserva',
-                ),
-                _buildConsiderationItem(
-                  '🥬',
-                  'Los intercambios en lila son opciones veganas o vegetarianas',
-                ),
-                _buildConsiderationItem(
-                  '🫒',
-                  'Prioriza el aceite de oliva virgen extra sobre otros aceites',
-                ),
-                _buildConsiderationItem(
-                  '🥗',
-                  'Añade verduras u hortalizas sin contabilizarlas, salvo que estén en las listas',
-                ),
-                _buildConsiderationItem(
-                  '🧂',
-                  'Usa especias libremente, excepto la sal (mejor evitarla)',
-                ),
-                _buildConsiderationItem(
-                  '💧',
-                  'Café, infusiones y bebidas cero no tienen aporte calórico. Prioriza el agua',
-                ),
+                _buildConsiderationItem('📏', 'Todo se pesa en crudo y en seco'),
+                _buildConsiderationItem('🥬', 'Los intercambios en lila son veganos'),
+                _buildConsiderationItem('🫒', 'Prioriza aceite de oliva virgen extra'),
+                _buildConsiderationItem('🥗', 'Añade verduras sin contabilizarlas'),
+                _buildConsiderationItem('🧂', 'Usa especias, evita la sal'),
+                _buildConsiderationItem('💧', 'Prioriza el agua'),
                 const SizedBox(height: 16),
                 const Text(
                   'ALIMENTOS SEMANALES RECOMENDADOS:',
@@ -282,12 +249,12 @@ class _DietUsersViewState extends State<DietUsersView> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  '• Legumbres: lentejas, garbanzos, alubias\n'
-                  '• Frutos secos: almendras, nueces, cacahuetes\n'
-                  '• Cereales integrales: arroz, pasta, pan, avena\n'
+                  '• Legumbres: lentejas, garbanzos\n'
+                  '• Frutos secos: almendras, nueces\n'
+                  '• Cereales integrales: arroz, pasta\n'
                   '• Fruta variada\n'
-                  '• Aguacate o guacamole\n'
-                  '• Semillas: lino, chía, pipas',
+                  '• Aguacate\n'
+                  '• Semillas: lino, chía',
                   style: TextStyle(fontSize: 13),
                 ),
               ],
@@ -313,12 +280,25 @@ class _DietUsersViewState extends State<DietUsersView> {
           Text(emoji, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 13),
-            ),
+            child: Text(text, style: const TextStyle(fontSize: 13)),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────
+  // VER LISTA DE ALIMENTOS
+  // ─────────────────────────────────────
+  void _showFoodList() {
+    showDialog(
+      context: context,
+      builder: (context) => _FoodListDialog(
+        userId: widget.userId,
+        onFoodSelected: (food) {
+          // Aquí podrías hacer algo cuando seleccionen un alimento
+          Navigator.pop(context);
+        },
       ),
     );
   }
@@ -333,7 +313,7 @@ class _DietUsersViewState extends State<DietUsersView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con botones - SIN TÍTULO
+          // Header con botones
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -344,15 +324,21 @@ class _DietUsersViewState extends State<DietUsersView> {
                 tooltip: 'Consideraciones',
               ),
               IconButton(
+                onPressed: _showFoodList,
+                icon: const Icon(Icons.restaurant_menu),
+                color: AppColors.bluePrimary,
+                tooltip: 'Ver lista de alimentos',
+              ),
+              IconButton(
                 onPressed: _uploadFoodListFromExcel,
                 icon: const Icon(Icons.upload_file),
                 color: AppColors.bluePrimary,
-                tooltip: 'Subir lista de alimentos (Excel)',
+                tooltip: 'Subir Excel',
               ),
             ],
           ),
 
-          // Lista de comidas del día
+          // Lista de comidas
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -370,31 +356,9 @@ class _DietUsersViewState extends State<DietUsersView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 60,
-                          color: Colors.red,
-                        ),
+                        const Icon(Icons.error_outline, size: 60, color: Colors.red),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Error al cargar datos',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            snapshot.error.toString(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
+                        const Text('Error al cargar datos'),
                       ],
                     ),
                   );
@@ -404,7 +368,6 @@ class _DietUsersViewState extends State<DietUsersView> {
                   return const _EmptyDietState();
                 }
 
-                // Filtrar entradas del día actual
                 final allEntries = snapshot.data!.docs
                     .map((doc) => DietEntry.fromFirestore(doc))
                     .toList();
@@ -435,6 +398,312 @@ class _DietUsersViewState extends State<DietUsersView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// =================================================
+/// DIÁLOGO DE LISTA DE ALIMENTOS
+/// =================================================
+class _FoodListDialog extends StatefulWidget {
+  final String userId;
+  final Function(FoodItem) onFoodSelected;
+
+  const _FoodListDialog({
+    required this.userId,
+    required this.onFoodSelected,
+  });
+
+  @override
+  State<_FoodListDialog> createState() => _FoodListDialogState();
+}
+
+class _FoodListDialogState extends State<_FoodListDialog> {
+  String _selectedCategory = 'Todos';
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  final List<String> _categories = [
+    'Todos',
+    'HIDRATOS DE CARBONO',
+    'PROTEINAS',
+    'GRASAS',
+    '1/2 PROTEINA',
+  ];
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'HIDRATOS DE CARBONO':
+        return Colors.orange;
+      case 'PROTEINAS':
+        return Colors.red;
+      case 'GRASAS':
+        return Colors.blue;
+      case '1/2 PROTEINA':
+        return Colors.purple;
+      default:
+        return AppColors.bluePrimary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                const Icon(Icons.restaurant_menu, color: AppColors.bluePrimary),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Lista de Alimentos',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Búsqueda
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar alimento...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: AppColors.background,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Filtros por categoría
+            SizedBox(
+              height: 40,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _categories.length,
+                itemBuilder: (context, index) {
+                  final category = _categories[index];
+                  final isSelected = _selectedCategory == category;
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(category),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedCategory = selected ? category : 'Todos';
+                        });
+                      },
+                      backgroundColor: AppColors.background,
+                      selectedColor: _getCategoryColor(category).withOpacity(0.2),
+                      labelStyle: TextStyle(
+                        color: isSelected ? _getCategoryColor(category) : AppColors.textSecondary,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Lista de alimentos
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('food_list')
+                    .orderBy('category')
+                    .orderBy('name')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restaurant,
+                            size: 60,
+                            color: AppColors.textSecondary.withOpacity(0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('No hay alimentos en la lista'),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Sube un archivo Excel para importar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  var foods = snapshot.data!.docs
+                      .map((doc) => FoodItem.fromFirestore(doc))
+                      .toList();
+
+                  // Filtrar por categoría
+                  if (_selectedCategory != 'Todos') {
+                    foods = foods
+                        .where((f) => f.category == _selectedCategory)
+                        .toList();
+                  }
+
+                  // Filtrar por búsqueda
+                  if (_searchQuery.isNotEmpty) {
+                    foods = foods
+                        .where((f) => f.name.toLowerCase().contains(_searchQuery))
+                        .toList();
+                  }
+
+                  if (foods.isEmpty) {
+                    return const Center(
+                      child: Text('No se encontraron alimentos'),
+                    );
+                  }
+
+                  // Agrupar por categoría
+                  final groupedFoods = <String, List<FoodItem>>{};
+                  for (var food in foods) {
+                    groupedFoods.putIfAbsent(food.category, () => []).add(food);
+                  }
+
+                  return ListView.builder(
+                    itemCount: groupedFoods.length,
+                    itemBuilder: (context, index) {
+                      final category = groupedFoods.keys.elementAt(index);
+                      final categoryFoods = groupedFoods[category]!;
+                      final color = _getCategoryColor(category);
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header de categoría
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  category,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: color,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '${categoryFoods.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Lista de alimentos de esta categoría
+                          ...categoryFoods.map((food) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                
+                              ),
+                              child: ListTile(
+                                dense: true,
+                                leading: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                title: Text(
+                                  food.name,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                                onTap: () => widget.onFoodSelected(food),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -547,11 +816,7 @@ class _DietEntryCard extends StatelessWidget {
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  _getMealIcon(entry.mealType),
-                  color: color,
-                  size: 20,
-                ),
+                child: Icon(_getMealIcon(entry.mealType), color: color, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -645,11 +910,7 @@ class _DietEntryCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.note,
-                  size: 16,
-                  color: AppColors.textSecondary,
-                ),
+                const Icon(Icons.note, size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
