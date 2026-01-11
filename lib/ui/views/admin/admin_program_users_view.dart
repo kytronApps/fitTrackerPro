@@ -15,7 +15,7 @@ class AdminProgramUsersView extends StatefulWidget {
 
 class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   final TextEditingController _programNameCtrl = TextEditingController();
-  final List<ProgramExercise> _exercises = [];
+  final List<TrainingDay> _trainingDays = [];
 
   @override
   void dispose() {
@@ -28,7 +28,7 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   // ─────────────────────────────────────
   void _openCreateProgramDialog() {
     _programNameCtrl.clear();
-    _exercises.clear();
+    _trainingDays.clear();
 
     showDialog(
       context: context,
@@ -56,35 +56,45 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                     const SizedBox(height: 16),
 
                     ElevatedButton.icon(
-                      onPressed: () => _openAddExerciseDialog(setDialogState),
+                      onPressed: () => _addTrainingDay(setDialogState),
                       icon: const Icon(Icons.add),
-                      label: const Text('Añadir ejercicio'),
+                      label: const Text('Añadir día de entrenamiento'),
                     ),
 
                     const SizedBox(height: 12),
 
-                    if (_exercises.isEmpty)
+                    if (_trainingDays.isEmpty)
                       const Text(
-                        'No hay ejercicios añadidos',
+                        'No hay días añadidos',
                         style: TextStyle(color: AppColors.textSecondary),
                       )
                     else
                       SizedBox(
-                        height: 200,
+                        height: 250,
                         child: ListView.builder(
-                          itemCount: _exercises.length,
+                          itemCount: _trainingDays.length,
                           itemBuilder: (_, index) {
-                            final e = _exercises[index];
-                            return ListTile(
-                              title: Text(e.name),
-                              subtitle: Text(e.displayFormat),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () {
-                                  setDialogState(() {
-                                    _exercises.removeAt(index);
-                                  });
-                                },
+                            final day = _trainingDays[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ExpansionTile(
+                                title: Text(day.displayName),
+                                subtitle: Text('${day.totalExercises} ejercicios'),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      _trainingDays.removeAt(index);
+                                    });
+                                  },
+                                ),
+                                children: day.exercises.map((e) {
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(e.name, style: const TextStyle(fontSize: 13)),
+                                    subtitle: Text(e.displayFormat, style: const TextStyle(fontSize: 12)),
+                                  );
+                                }).toList(),
                               ),
                             );
                           },
@@ -97,13 +107,13 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                 TextButton(
                   onPressed: () {
                     _programNameCtrl.clear();
-                    _exercises.clear();
+                    _trainingDays.clear();
                     Navigator.pop(context);
                   },
                   child: const Text('Cancelar'),
                 ),
                 ElevatedButton(
-                  onPressed: _exercises.isEmpty ? null : _saveProgram,
+                  onPressed: _trainingDays.isEmpty ? null : _saveProgram,
                   child: const Text('Guardar programa'),
                 ),
               ],
@@ -115,9 +125,102 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   }
 
   // ─────────────────────────────────────
-  // AÑADIR EJERCICIO (para crear programa)
+  // AÑADIR DÍA DE ENTRENAMIENTO
   // ─────────────────────────────────────
-  void _openAddExerciseDialog(StateSetter setDialogState) {
+  void _addTrainingDay(StateSetter setDialogState) {
+    final dayNameCtrl = TextEditingController();
+    final exercises = <ProgramExercise>[];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (ctx, setDayDialogState) {
+            return AlertDialog(
+              title: Text('Día ${_trainingDays.length + 1}'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: dayNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del día (opcional)',
+                        hintText: 'Ej: Push, Pull, Legs',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    ElevatedButton.icon(
+                      onPressed: () => _addExerciseToDay(exercises, setDayDialogState),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Añadir ejercicio'),
+                    ),
+                    
+                    const SizedBox(height: 12),
+
+                    if (exercises.isEmpty)
+                      const Text('No hay ejercicios', style: TextStyle(color: AppColors.textSecondary))
+                    else
+                      SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          itemCount: exercises.length,
+                          itemBuilder: (_, idx) {
+                            final e = exercises[idx];
+                            return ListTile(
+                              dense: true,
+                              title: Text(e.name),
+                              subtitle: Text(e.displayFormat),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete, size: 20),
+                                onPressed: () {
+                                  setDayDialogState(() {
+                                    exercises.removeAt(idx);
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: exercises.isEmpty ? null : () {
+                    final day = TrainingDay(
+                      dayNumber: _trainingDays.length + 1,
+                      name: dayNameCtrl.text.trim().isEmpty ? null : dayNameCtrl.text.trim(),
+                      exercises: exercises,
+                    );
+                    
+                    setDialogState(() {
+                      _trainingDays.add(day);
+                    });
+                    
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Guardar día'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────
+  // AÑADIR EJERCICIO AL DÍA
+  // ─────────────────────────────────────
+  void _addExerciseToDay(List<ProgramExercise> exercises, StateSetter setDayDialogState) {
     final nameCtrl = TextEditingController();
     final setsCtrl = TextEditingController();
     final repsCtrl = TextEditingController();
@@ -153,7 +256,7 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                   controller: repsCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Repeticiones',
-                    hintText: 'Ej: 8-12 o 10',
+                    hintText: 'Ej: 8-12',
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -180,43 +283,23 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                 final reps = repsCtrl.text.trim();
                 final rpe = int.tryParse(rpeCtrl.text.trim());
 
-                if (name.isEmpty) {
+                if (name.isEmpty || sets == null || sets <= 0 || reps.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('El nombre del ejercicio es obligatorio'),
-                    ),
-                  );
-                  return;
-                }
-
-                if (sets == null || sets <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Las series deben ser un número válido mayor a 0'),
-                    ),
-                  );
-                  return;
-                }
-
-                if (reps.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Las repeticiones son obligatorias'),
-                    ),
+                    const SnackBar(content: Text('Completa los campos obligatorios')),
                   );
                   return;
                 }
 
                 final exercise = ProgramExercise(
-                  order: _exercises.length + 1,
+                  order: exercises.length + 1,
                   name: name,
                   sets: sets,
                   reps: reps,
                   rpe: rpe,
                 );
 
-                setDialogState(() {
-                  _exercises.add(exercise);
+                setDayDialogState(() {
+                  exercises.add(exercise);
                 });
 
                 Navigator.pop(context);
@@ -230,12 +313,10 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   }
 
   // ─────────────────────────────────────
-  // GUARDAR PROGRAMA EN FIRESTORE
+  // GUARDAR PROGRAMA
   // ─────────────────────────────────────
   Future<void> _saveProgram() async {
     try {
-      debugPrint('🔥 _saveProgram EJECUTADO');
-
       final programsRef = FirebaseFirestore.instance.collection('program');
 
       final activeQuery = await programsRef
@@ -267,13 +348,13 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
         blockNumber: nextBlock,
         active: true,
         createdAt: DateTime.now(),
-        exercises: _exercises,
+        trainingDays: _trainingDays,
       );
 
       await programsRef.add(newProgram.toFirestore());
 
       _programNameCtrl.clear();
-      _exercises.clear();
+      _trainingDays.clear();
 
       if (mounted) {
         Navigator.pop(context);
@@ -286,12 +367,12 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
         );
       }
     } catch (e) {
-      debugPrint('❌ Error al guardar programa: $e');
+      debugPrint('❌ Error: $e');
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al guardar: $e'),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -300,123 +381,111 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   }
 
   // ─────────────────────────────────────
-  // AÑADIR EJERCICIO A PROGRAMA EXISTENTE
+  // AÑADIR DÍA A PROGRAMA EXISTENTE
   // ─────────────────────────────────────
-  Future<void> _addExerciseToProgram(String programId, List<ProgramExercise> currentExercises) async {
-    final nameCtrl = TextEditingController();
-    final setsCtrl = TextEditingController();
-    final repsCtrl = TextEditingController();
-    final rpeCtrl = TextEditingController();
+  Future<void> _addDayToProgram(String programId, List<TrainingDay> currentDays) async {
+    final dayNameCtrl = TextEditingController();
+    final exercises = <ProgramExercise>[];
 
-    final result = await showDialog<ProgramExercise>(
+    final newDay = await showDialog<TrainingDay>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Añadir ejercicio'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Ejercicio',
-                    hintText: 'Ej: Press banca',
-                  ),
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return AlertDialog(
+              title: Text('Día ${currentDays.length + 1}'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: dayNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del día (opcional)',
+                        hintText: 'Ej: Push',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    ElevatedButton.icon(
+                      onPressed: () => _addExerciseToDay(exercises, setState),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Añadir ejercicio'),
+                    ),
+                    
+                    const SizedBox(height: 12),
+
+                    if (exercises.isEmpty)
+                      const Text('No hay ejercicios')
+                    else
+                      SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          itemCount: exercises.length,
+                          itemBuilder: (_, idx) {
+                            final e = exercises[idx];
+                            return ListTile(
+                              dense: true,
+                              title: Text(e.name),
+                              subtitle: Text(e.displayFormat),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () {
+                                  setState(() {
+                                    exercises.removeAt(idx);
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: setsCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Series',
-                    hintText: 'Ej: 4',
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: repsCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Repeticiones',
-                    hintText: 'Ej: 8-12 o 10',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: rpeCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'RPE (opcional)',
-                    hintText: 'Ej: 8',
-                  ),
+                ElevatedButton(
+                  onPressed: exercises.isEmpty ? null : () {
+                    Navigator.pop(
+                      context,
+                      TrainingDay(
+                        dayNumber: currentDays.length + 1,
+                        name: dayNameCtrl.text.trim().isEmpty ? null : dayNameCtrl.text.trim(),
+                        exercises: exercises,
+                      ),
+                    );
+                  },
+                  child: const Text('Guardar'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final sets = int.tryParse(setsCtrl.text.trim());
-                final reps = repsCtrl.text.trim();
-                final rpe = int.tryParse(rpeCtrl.text.trim());
-
-                if (name.isEmpty || sets == null || sets <= 0 || reps.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Por favor completa todos los campos'),
-                    ),
-                  );
-                  return;
-                }
-
-                final exercise = ProgramExercise(
-                  order: currentExercises.length + 1,
-                  name: name,
-                  sets: sets,
-                  reps: reps,
-                  rpe: rpe,
-                );
-
-                Navigator.pop(context, exercise);
-              },
-              child: const Text('Añadir'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
 
-    if (result != null) {
+    if (newDay != null) {
       try {
-        final updatedExercises = [...currentExercises, result];
+        final updated = [...currentDays, newDay];
         
-        await FirebaseFirestore.instance
-            .collection('program')
-            .doc(programId)
-            .update({
-          'exercises': updatedExercises.map((e) => e.toMap()).toList(),
+        await FirebaseFirestore.instance.collection('program').doc(programId).update({
+          'training_days': updated.map((d) => d.toMap()).toList(),
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ejercicio añadido correctamente'),
-              backgroundColor: Colors.green,
-            ),
+            const SnackBar(content: Text('Día añadido correctamente'), backgroundColor: Colors.green),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al añadir ejercicio: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -424,181 +493,51 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
   }
 
   // ─────────────────────────────────────
-  // EDITAR EJERCICIO
+  // ELIMINAR DÍA
   // ─────────────────────────────────────
-  Future<void> _editExercise(String programId, int index, ProgramExercise exercise, List<ProgramExercise> allExercises) async {
-    final nameCtrl = TextEditingController(text: exercise.name);
-    final setsCtrl = TextEditingController(text: exercise.sets.toString());
-    final repsCtrl = TextEditingController(text: exercise.reps);
-    final rpeCtrl = TextEditingController(text: exercise.rpe?.toString() ?? '');
-
-    final result = await showDialog<ProgramExercise>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Editar ejercicio'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Ejercicio'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: setsCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Series'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: repsCtrl,
-                  decoration: const InputDecoration(labelText: 'Repeticiones'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: rpeCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'RPE (opcional)'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final sets = int.tryParse(setsCtrl.text.trim());
-                final reps = repsCtrl.text.trim();
-                final rpe = int.tryParse(rpeCtrl.text.trim());
-
-                if (name.isEmpty || sets == null || sets <= 0 || reps.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Por favor completa todos los campos'),
-                    ),
-                  );
-                  return;
-                }
-
-                final updatedExercise = ProgramExercise(
-                  order: exercise.order,
-                  name: name,
-                  sets: sets,
-                  reps: reps,
-                  rpe: rpe,
-                );
-
-                Navigator.pop(context, updatedExercise);
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result != null) {
-      try {
-        final updatedExercises = [...allExercises];
-        updatedExercises[index] = result;
-
-        await FirebaseFirestore.instance
-            .collection('program')
-            .doc(programId)
-            .update({
-          'exercises': updatedExercises.map((e) => e.toMap()).toList(),
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ejercicio actualizado correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al actualizar ejercicio: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  // ─────────────────────────────────────
-  // ELIMINAR EJERCICIO
-  // ─────────────────────────────────────
-  Future<void> _deleteExercise(String programId, int index, List<ProgramExercise> allExercises) async {
+  Future<void> _deleteDay(String programId, int dayIndex, List<TrainingDay> allDays) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Eliminar ejercicio'),
-          content: Text('¿Estás seguro de eliminar "${allExercises[index].name}"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar día'),
+        content: Text('¿Eliminar ${allDays[dayIndex].displayName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
       try {
-        final updatedExercises = [...allExercises];
-        updatedExercises.removeAt(index);
+        final updated = [...allDays];
+        updated.removeAt(dayIndex);
 
-        // Reordenar los ejercicios
-        for (int i = 0; i < updatedExercises.length; i++) {
-          updatedExercises[i] = ProgramExercise(
-            order: i + 1,
-            name: updatedExercises[i].name,
-            sets: updatedExercises[i].sets,
-            reps: updatedExercises[i].reps,
-            rpe: updatedExercises[i].rpe,
-          );
+        // Reordenar números de día
+        for (int i = 0; i < updated.length; i++) {
+          updated[i] = updated[i].copyWith(dayNumber: i + 1);
         }
 
-        await FirebaseFirestore.instance
-            .collection('program')
-            .doc(programId)
-            .update({
-          'exercises': updatedExercises.map((e) => e.toMap()).toList(),
+        await FirebaseFirestore.instance.collection('program').doc(programId).update({
+          'training_days': updated.map((d) => d.toMap()).toList(),
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ejercicio eliminado correctamente'),
-              backgroundColor: Colors.orange,
-            ),
+            const SnackBar(content: Text('Día eliminado'), backgroundColor: Colors.orange),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar ejercicio: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -639,9 +578,7 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -655,9 +592,8 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
                   program: program,
                   programId: doc.id,
                   onCreateNew: _openCreateProgramDialog,
-                  onAddExercise: () => _addExerciseToProgram(doc.id, program.exercises),
-                  onEditExercise: (index, exercise) => _editExercise(doc.id, index, exercise, program.exercises),
-                  onDeleteExercise: (index) => _deleteExercise(doc.id, index, program.exercises),
+                  onAddDay: () => _addDayToProgram(doc.id, program.trainingDays),
+                  onDeleteDay: (idx) => _deleteDay(doc.id, idx, program.trainingDays),
                 );
               },
             ),
@@ -669,7 +605,7 @@ class _AdminProgramUsersViewState extends State<AdminProgramUsersView> {
 }
 
 /// =================================================
-/// ESTADO: SIN PROGRAMA ACTIVO
+/// ESTADO: SIN PROGRAMA
 /// =================================================
 class _EmptyProgramState extends StatelessWidget {
   final VoidCallback onCreate;
@@ -689,17 +625,8 @@ class _EmptyProgramState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Este usuario no tiene un programa activo',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Crea un nuevo bloque de entrenamiento',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            'No hay programa activo',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
@@ -718,41 +645,37 @@ class _EmptyProgramState extends StatelessWidget {
 }
 
 /// =================================================
-/// TARJETA: PROGRAMA ACTIVO
+/// PROGRAMA ACTIVO
 /// =================================================
 class _ActiveProgramCard extends StatelessWidget {
   final ProgramModel program;
   final String programId;
   final VoidCallback onCreateNew;
-  final VoidCallback onAddExercise;
-  final Function(int index, ProgramExercise exercise) onEditExercise;
-  final Function(int index) onDeleteExercise;
+  final VoidCallback onAddDay;
+  final Function(int) onDeleteDay;
 
   const _ActiveProgramCard({
     required this.program,
     required this.programId,
     required this.onCreateNew,
-    required this.onAddExercise,
-    required this.onEditExercise,
-    required this.onDeleteExercise,
+    required this.onAddDay,
+    required this.onDeleteDay,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Botones superiores
         Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: onAddExercise,
+                onPressed: onAddDay,
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Añadir ejercicio'),
+                label: const Text('Añadir día'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  foregroundColor: Colors.white,
                 ),
               ),
             ),
@@ -763,28 +686,19 @@ class _ActiveProgramCard extends StatelessWidget {
               label: const Text('Nuevo programa'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.bluePrimary,
-                foregroundColor: AppColors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                foregroundColor: Colors.white,
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
 
-        // Tarjeta del programa
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -797,15 +711,11 @@ class _ActiveProgramCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.tagWorkout,
                         borderRadius: BorderRadius.circular(12),
@@ -823,89 +733,56 @@ class _ActiveProgramCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Bloque ${program.blockNumber} • ${program.totalExercises} ejercicios',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+                  'Bloque ${program.blockNumber} • ${program.totalDays} días • ${program.totalExercises} ejercicios',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
 
                 Expanded(
-                  child: program.exercises.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No hay ejercicios en este programa',
-                            style: TextStyle(color: AppColors.textSecondary),
+                  child: ListView.builder(
+                    itemCount: program.trainingDays.length,
+                    itemBuilder: (context, dayIndex) {
+                      final day = program.trainingDays[dayIndex];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ExpansionTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.bluePrimary,
+                            foregroundColor: Colors.white,
+                            child: Text('${day.dayNumber}'),
                           ),
-                        )
-                      : ListView.separated(
-                          itemCount: program.exercises.length,
-                          separatorBuilder: (_, __) => const Divider(height: 24),
-                          itemBuilder: (context, index) {
-                            final e = program.exercises[index];
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.bluePrimary.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${e.order}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: AppColors.bluePrimary,
-                                      ),
-                                    ),
+                          title: Text(
+                            day.displayName,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text('${day.totalExercises} ejercicios'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                            onPressed: () => onDeleteDay(dayIndex),
+                          ),
+                          children: day.exercises.map((e) {
+                            return ListTile(
+                              dense: true,
+                              leading: CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.bluePrimary.withOpacity(0.1),
+                                child: Text(
+                                  '${e.order}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.bluePrimary,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        e.name,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        e.displayFormat,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Botones de acción
-                                IconButton(
-                                  icon: const Icon(Icons.edit, size: 20),
-                                  color: AppColors.bluePrimary,
-                                  onPressed: () => onEditExercise(index, e),
-                                  tooltip: 'Editar',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size: 20),
-                                  color: Colors.red,
-                                  onPressed: () => onDeleteExercise(index),
-                                  tooltip: 'Eliminar',
-                                ),
-                              ],
+                              ),
+                              title: Text(e.name, style: const TextStyle(fontSize: 13)),
+                              subtitle: Text(e.displayFormat, style: const TextStyle(fontSize: 12)),
                             );
-                          },
+                          }).toList(),
                         ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
