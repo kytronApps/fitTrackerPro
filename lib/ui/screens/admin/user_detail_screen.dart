@@ -112,7 +112,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                 _PlanningTab(userId: widget.user.id),
                 SupplementsUsersView(userId: widget.user.id),
 
-                _DietTab(userId: widget.user.id),
+                DietUsersView(userId: widget.user.id),
               ],
             ),
           ),

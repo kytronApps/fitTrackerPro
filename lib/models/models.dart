@@ -3,3 +3,4 @@ export './program_model.dart' hide ProgramExercise;
 export './weekly_questionnaire_model.dart';
 export './program_model.dart';
 export './suplementos_model.dart';
+export './diet_model.dart';
