@@ -24,27 +24,16 @@ class _DietUsersViewState extends State<DietUsersView> {
   // ─────────────────────────────────────
   // SUBIR EXCEL CON LISTA DE ALIMENTOS
   // ─────────────────────────────────────
-  Future<void> _uploadFoodListFromExcel() async {
+  Future<void> _uploadFoodListFromExcel({required String category}) async {
     BuildContext? dialogContext;
-    
+
     try {
-      FilePickerResult? result;
-      
-      try {
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['xlsx', 'xls'],
-          withData: true,
-          allowMultiple: false,
-        );
-      } catch (pickerError) {
-        debugPrint('Error con FilePicker.platform: $pickerError');
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
-          withData: true,
-          allowMultiple: false,
-        );
-      }
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true,
+        allowMultiple: false,
+      );
 
       if (result == null || result.files.isEmpty) return;
 
@@ -53,44 +42,27 @@ class _DietUsersViewState extends State<DietUsersView> {
         throw Exception('No se pudo leer el archivo');
       }
 
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) {
-            dialogContext = ctx;
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          },
-        );
-      }
+      if (!mounted) return;
 
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Loader
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          dialogContext = ctx;
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
 
-      late Excel excel;
-      
-      try {
-        excel = Excel.decodeBytes(List<int>.from(bytes));
-      } catch (e1) {
-        debugPrint('Error con List<int>, intentando con bytes directos: $e1');
-        try {
-          excel = Excel.decodeBytes(bytes);
-        } catch (e2) {
-          debugPrint('Error con bytes directos: $e2');
-          throw Exception('No se pudo leer el formato del archivo Excel');
-        }
-      }
-      
+      final excel = Excel.decodeBytes(bytes);
+
       if (excel.tables.isEmpty) {
-        throw Exception('El archivo Excel está vacío o no tiene hojas');
+        throw Exception('El Excel no contiene hojas');
       }
-      
-      final tableName = excel.tables.keys.first;
-      final sheet = excel.tables[tableName];
 
-      if (sheet == null || sheet.rows.isEmpty) {
-        throw Exception('La hoja de cálculo está vacía');
+      final sheet = excel.tables.values.first;
+      if (sheet == null || sheet.rows.length <= 1) {
+        throw Exception('El Excel no contiene datos');
       }
 
       final batch = FirebaseFirestore.instance.batch();
@@ -98,68 +70,21 @@ class _DietUsersViewState extends State<DietUsersView> {
 
       int addedCount = 0;
 
+      // 🔥 SOLO LEEMOS LA PRIMERA COLUMNA
       for (int i = 1; i < sheet.rows.length; i++) {
-        final row = sheet.rows[i];
-        
-        try {
-          if (row.length > 0 && row[0] != null && row[0]!.value != null) {
-            final value = row[0]!.value.toString().trim();
-            if (value.isNotEmpty && 
-                !value.toUpperCase().contains('HIDRATOS') &&
-                !value.toUpperCase().contains('CARBONO')) {
-              final docRef = foodsRef.doc();
-              batch.set(docRef, {
-                'name': value,
-                'category': 'HIDRATOS DE CARBONO',
-                'created_at': FieldValue.serverTimestamp(),
-              });
-              addedCount++;
-            }
-          }
+        final cell = sheet.rows[i][0]?.value;
+        if (cell == null) continue;
 
-          if (row.length > 1 && row[1] != null && row[1]!.value != null) {
-            final value = row[1]!.value.toString().trim();
-            if (value.isNotEmpty && !value.toUpperCase().contains('PROTEINA')) {
-              final docRef = foodsRef.doc();
-              batch.set(docRef, {
-                'name': value,
-                'category': 'PROTEINAS',
-                'created_at': FieldValue.serverTimestamp(),
-              });
-              addedCount++;
-            }
-          }
+        final name = cell.toString().trim();
+        if (name.isEmpty) continue;
 
-          if (row.length > 2 && row[2] != null && row[2]!.value != null) {
-            final value = row[2]!.value.toString().trim();
-            if (value.isNotEmpty && !value.toUpperCase().contains('GRASAS')) {
-              final docRef = foodsRef.doc();
-              batch.set(docRef, {
-                'name': value,
-                'category': 'GRASAS',
-                'created_at': FieldValue.serverTimestamp(),
-              });
-              addedCount++;
-            }
-          }
+        batch.set(foodsRef.doc(), {
+          'name': name,
+          'category': category,
+          'created_at': FieldValue.serverTimestamp(),
+        });
 
-          if (row.length > 3 && row[3] != null && row[3]!.value != null) {
-            final value = row[3]!.value.toString().trim();
-            if (value.isNotEmpty && 
-                !value.contains('1/2') && 
-                !value.toUpperCase().contains('PROTEINA')) {
-              final docRef = foodsRef.doc();
-              batch.set(docRef, {
-                'name': value,
-                'category': '1/2 PROTEINA',
-                'created_at': FieldValue.serverTimestamp(),
-              });
-              addedCount++;
-            }
-          }
-        } catch (rowError) {
-          debugPrint('Error procesando fila $i: $rowError');
-        }
+        addedCount++;
       }
 
       if (addedCount > 0) {
@@ -169,36 +94,29 @@ class _DietUsersViewState extends State<DietUsersView> {
       if (dialogContext != null && mounted) {
         Navigator.of(dialogContext!).pop();
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              addedCount > 0 
-                ? '✅ $addedCount alimentos importados correctamente'
-                : 'ℹ️ No se encontraron alimentos para importar'
+              addedCount > 0
+                  ? '✅ $addedCount alimentos importados ($category)'
+                  : 'ℹ️ No se encontraron alimentos',
             ),
             backgroundColor: addedCount > 0 ? Colors.green : Colors.orange,
-            duration: const Duration(seconds: 3),
           ),
         );
       }
-    } catch (e, stackTrace) {
-      debugPrint('Error detallado al importar Excel: $e');
-      debugPrint('Stack trace: $stackTrace');
-      
+    } catch (e) {
       if (dialogContext != null && mounted) {
-        try {
-          Navigator.of(dialogContext!).pop();
-        } catch (_) {}
+        Navigator.of(dialogContext!).pop();
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Error al importar: ${e.toString().split(':').last}'),
+            content: Text('❌ Error al importar: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -233,10 +151,22 @@ class _DietUsersViewState extends State<DietUsersView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildConsiderationItem('📏', 'Todo se pesa en crudo y en seco'),
-                _buildConsiderationItem('🥬', 'Los intercambios en lila son veganos'),
-                _buildConsiderationItem('🫒', 'Prioriza aceite de oliva virgen extra'),
-                _buildConsiderationItem('🥗', 'Añade verduras sin contabilizarlas'),
+                _buildConsiderationItem(
+                  '📏',
+                  'Todo se pesa en crudo y en seco',
+                ),
+                _buildConsiderationItem(
+                  '🥬',
+                  'Los intercambios en lila son veganos',
+                ),
+                _buildConsiderationItem(
+                  '🫒',
+                  'Prioriza aceite de oliva virgen extra',
+                ),
+                _buildConsiderationItem(
+                  '🥗',
+                  'Añade verduras sin contabilizarlas',
+                ),
                 _buildConsiderationItem('🧂', 'Usa especias, evita la sal'),
                 _buildConsiderationItem('💧', 'Prioriza el agua'),
                 const SizedBox(height: 16),
@@ -279,9 +209,7 @@ class _DietUsersViewState extends State<DietUsersView> {
         children: [
           Text(emoji, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(text, style: const TextStyle(fontSize: 13)),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );
@@ -330,7 +258,8 @@ class _DietUsersViewState extends State<DietUsersView> {
                 tooltip: 'Ver lista de alimentos',
               ),
               IconButton(
-                onPressed: _uploadFoodListFromExcel,
+                onPressed: () =>
+                    _uploadFoodListFromExcel(category: _selectedCategory),
                 icon: const Icon(Icons.upload_file),
                 color: AppColors.bluePrimary,
                 tooltip: 'Subir Excel',
@@ -346,6 +275,7 @@ class _DietUsersViewState extends State<DietUsersView> {
                   .where('id_user', isEqualTo: widget.userId)
                   .orderBy('date', descending: true)
                   .snapshots(),
+
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -356,7 +286,11 @@ class _DietUsersViewState extends State<DietUsersView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 60,
+                          color: Colors.red,
+                        ),
                         const SizedBox(height: 16),
                         const Text('Error al cargar datos'),
                       ],
@@ -380,8 +314,10 @@ class _DietUsersViewState extends State<DietUsersView> {
                 final endOfDay = startOfDay.add(const Duration(days: 1));
 
                 final entriesForSelectedDate = allEntries.where((entry) {
-                  return entry.date.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
-                         entry.date.isBefore(endOfDay);
+                  return entry.date.isAfter(
+                        startOfDay.subtract(const Duration(seconds: 1)),
+                      ) &&
+                      entry.date.isBefore(endOfDay);
                 }).toList();
 
                 if (entriesForSelectedDate.isEmpty) {
@@ -410,10 +346,7 @@ class _FoodListDialog extends StatefulWidget {
   final String userId;
   final Function(FoodItem) onFoodSelected;
 
-  const _FoodListDialog({
-    required this.userId,
-    required this.onFoodSelected,
-  });
+  const _FoodListDialog({required this.userId, required this.onFoodSelected});
 
   @override
   State<_FoodListDialog> createState() => _FoodListDialogState();
@@ -447,6 +380,116 @@ class _FoodListDialogState extends State<_FoodListDialog> {
     }
   }
 
+  void _openAddFoodDialog() {
+    final nameCtrl = TextEditingController();
+    String category = 'HIDRATOS DE CARBONO';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Añadir alimento'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del alimento',
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: category,
+              decoration: const InputDecoration(labelText: 'Categoría'),
+              items: const [
+                DropdownMenuItem(
+                  value: 'HIDRATOS DE CARBONO',
+                  child: Text('Hidratos de carbono'),
+                ),
+                DropdownMenuItem(value: 'PROTEINAS', child: Text('Proteínas')),
+                DropdownMenuItem(value: 'GRASAS', child: Text('Grasas')),
+                DropdownMenuItem(
+                  value: '1/2 PROTEINA',
+                  child: Text('1/2 Proteína'),
+                ),
+              ],
+              onChanged: (v) => category = v!,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtrl.text.trim().isEmpty) return;
+
+              await FirebaseFirestore.instance.collection('food_list').add({
+                'name': nameCtrl.text.trim(),
+                'category': category,
+                'created_at': FieldValue.serverTimestamp(),
+              });
+
+              Navigator.pop(context);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  void _openEditCategoryDialog(FoodItem food) {
+  String selectedCategory = food.category;
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Cambiar categoría'),
+      content: DropdownButtonFormField<String>(
+        value: selectedCategory,
+        items: const [
+          DropdownMenuItem(value: 'HIDRATOS DE CARBONO', child: Text('Hidratos')),
+          DropdownMenuItem(value: 'PROTEINAS', child: Text('Proteínas')),
+          DropdownMenuItem(value: 'GRASAS', child: Text('Grasas')),
+          DropdownMenuItem(value: '1/2 PROTEINA', child: Text('1/2 Proteína')),
+        ],
+        onChanged: (v) => selectedCategory = v!,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            await FirebaseFirestore.instance
+                .collection('food_list')
+                .doc(food.id)
+                .update({'category': selectedCategory});
+
+            Navigator.pop(context);
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _deleteFood(String foodId) async {
+  await FirebaseFirestore.instance
+      .collection('food_list')
+      .doc(foodId)
+      .delete();
+}
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -472,6 +515,11 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                       color: AppColors.textPrimary,
                     ),
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Añadir alimento',
+                  onPressed: _openAddFoodDialog,
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -510,7 +558,7 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                 itemBuilder: (context, index) {
                   final category = _categories[index];
                   final isSelected = _selectedCategory == category;
-                  
+
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
@@ -522,10 +570,16 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                         });
                       },
                       backgroundColor: AppColors.background,
-                      selectedColor: _getCategoryColor(category).withOpacity(0.2),
+                      selectedColor: _getCategoryColor(
+                        category,
+                      ).withOpacity(0.2),
                       labelStyle: TextStyle(
-                        color: isSelected ? _getCategoryColor(category) : AppColors.textSecondary,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected
+                            ? _getCategoryColor(category)
+                            : AppColors.textSecondary,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         fontSize: 12,
                       ),
                     ),
@@ -540,9 +594,9 @@ class _FoodListDialogState extends State<_FoodListDialog> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('food_list')
-                    .orderBy('category')
                     .orderBy('name')
                     .snapshots(),
+
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -591,7 +645,9 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                   // Filtrar por búsqueda
                   if (_searchQuery.isNotEmpty) {
                     foods = foods
-                        .where((f) => f.name.toLowerCase().contains(_searchQuery))
+                        .where(
+                          (f) => f.name.toLowerCase().contains(_searchQuery),
+                        )
                         .toList();
                   }
 
@@ -650,10 +706,7 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                                 const Spacer(),
                                 Text(
                                   '${categoryFoods.length}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: color,
-                                  ),
+                                  style: TextStyle(fontSize: 12, color: color),
                                 ),
                               ],
                             ),
@@ -666,7 +719,6 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
-                                
                               ),
                               child: ListTile(
                                 dense: true,
@@ -685,12 +737,24 @@ class _FoodListDialogState extends State<_FoodListDialog> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                trailing: Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 14,
-                                  color: AppColors.textSecondary,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, size: 18),
+                                      onPressed: () =>
+                                          _openEditCategoryDialog(food),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () => _deleteFood(food.id),
+                                    ),
+                                  ],
                                 ),
-                                onTap: () => widget.onFoodSelected(food),
                               ),
                             );
                           }),
@@ -738,10 +802,7 @@ class _EmptyDietState extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'No hay comidas registradas',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -816,7 +877,11 @@ class _DietEntryCard extends StatelessWidget {
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(_getMealIcon(entry.mealType), color: color, size: 20),
+                child: Icon(
+                  _getMealIcon(entry.mealType),
+                  color: color,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -884,7 +949,10 @@ class _DietEntryCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(8),
@@ -910,7 +978,11 @@ class _DietEntryCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.note, size: 16, color: AppColors.textSecondary),
+                const Icon(
+                  Icons.note,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
