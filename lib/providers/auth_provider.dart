@@ -19,7 +19,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAdmin => _userData?["role"] == "admin";
   bool get isUser => _userData?["role"] == "user";
 
-  /// 🔹 LOGIN
+  /// 🔹 LOGIN ADMINISTRADOR (con email y contraseña)
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
@@ -55,6 +55,44 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return true;
+  }
+
+  /// 🔹 LOGIN USUARIO (solo con email, sin contraseña)
+  Future<bool> loginUser(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // Buscar usuario por email en Firestore
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection("users")
+          .where("email", isEqualTo: email)
+          .where("role", isEqualTo: "user")
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        _errorMessage = "No se encontró un usuario con ese correo";
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Guardamos datos del usuario
+      _userData = querySnapshot.docs.first.data();
+
+      print("📌 Usuario encontrado: $_userData");
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = "Error al buscar el usuario: $e";
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   /// 🔹 LOGOUT

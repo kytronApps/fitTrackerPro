@@ -2,19 +2,26 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/colors.dart';
 import '../../widgets/widgets.dart';
 
+enum LoginMode { none, admin, user }
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-  
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool showForm = false;
+  LoginMode mode = LoginMode.none;
 
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
+
+  void _resetForm() {
+    emailCtrl.clear();
+    passCtrl.clear();
+    setState(() => mode = LoginMode.none);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,32 +42,39 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: AppColors.white,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: showForm
-                    ? LoginForm(
-                        emailCtrl: emailCtrl,
-                        passCtrl: passCtrl,
-                        onBack: () => setState(() => showForm = false),
-                      )
-                    : LoginAccessButtons(
-                        onAdminTap: () => setState(() => showForm = true),
-                        onUserTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text("El acceso de usuario aún no está disponible"),
-                            ),
-                          );
-                        },
-                      ),
+                child: _buildContent(),
               ),
 
               const SizedBox(height: 40),
-
-              
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildContent() {
+    switch (mode) {
+      case LoginMode.admin:
+        return LoginForm(
+          emailCtrl: emailCtrl,
+          passCtrl: passCtrl,
+          onBack: _resetForm,
+        );
+
+      case LoginMode.user:
+        return UserLoginForm(
+          emailCtrl: emailCtrl,
+          passCtrl: passCtrl,
+          onBack: _resetForm,
+        );
+
+      case LoginMode.none:
+      default:
+        return LoginAccessButtons(
+          onAdminTap: () => setState(() => mode = LoginMode.admin),
+          onUserTap: () => setState(() => mode = LoginMode.user),
+        );
+    }
   }
 }
