@@ -27,9 +27,9 @@ class LoginAccessButtons extends StatelessWidget {
           "Usuario",
           "Plan personalizado",
           Icons.person_outline,
-          Colors.grey,
+          AppColors.bluePrimary, // 👈 Color más bonito
           onUserTap,
-          disabled: true,
+          disabled: false, // 👈 CAMBIO AQUÍ: false en vez de true
         ),
       ],
     );
